@@ -1,46 +1,195 @@
 name: Release
 
+# Manual semver release. Pick which part of the version to bump (patch /
+# minor / major) and the workflow:
+#   1. Reads the latest v*.*.* tag reachable from the current ref.
+#   2. Computes the next version by incrementing exactly one component
+#      (patch:   vX.Y.Z -> vX.Y.(Z+1))
+#      (minor:   vX.Y.Z -> vX.(Y+1).0)
+#      (major:   vX.Y.Z -> v(X+1).0.0)
+#   3. Creates an annotated tag, builds and verifies the binary
+#      distribution, and publishes the GitHub release plus the `binary`
+#      branch.
+#
+# Because the next version is computed — never typed — skips like v0.2.0 ->
+# v0.5.0 or reversals like v0.5.0 -> v0.3.0 aren't possible. Pushing a v* tag
+# by hand also triggers this workflow; in that case the pushed tag is used
+# as-is and the version computation is skipped.
+
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver component to bump
+        type: choice
+        required: true
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: "Compute the next version but don't tag, build, or release"
+        type: boolean
+        default: false
+
+# Only one release can be in flight at a time. Concurrent runs would race on
+# the tag namespace and the binary branch.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
+env:
+  SNAP_XCODE: "26.4.1"
+
 jobs:
   release:
-    name: Build XCFrameworks and publish
+    name: Compute version, build, and publish
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Fetch full history + all tags so we can resolve the latest
+          # v*.*.* tag on this branch.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: "Guard: dispatched releases only from main"
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Dispatched releases can only run on main (got ${{ github.ref }})."
+          exit 1
+
+      - name: Compute next version
+        id: version
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+
+          # Pick the highest reachable vMAJOR.MINOR.PATCH tag. If none
+          # exists we start from v0.0.0 and the first release is v0.0.1 /
+          # v0.1.0 / v1.0.0 depending on bump.
+          latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --merged HEAD --sort=-v:refname | head -n1)"
+          if [ -z "$latest" ]; then
+            echo "No prior release tag; starting from v0.0.0"
+            current="v0.0.0"
+          else
+            current="$latest"
+          fi
+
+          ver="${current#v}"
+          major="${ver%%.*}"
+          rest="${ver#*.}"
+          minor="${rest%%.*}"
+          patch="${rest#*.}"
+
+          case "$BUMP" in
+            patch) next="v${major}.${minor}.$((patch + 1))" ;;
+            minor) next="v${major}.$((minor + 1)).0" ;;
+            major) next="v$((major + 1)).0.0" ;;
+            *)     echo "::error::Unknown bump '$BUMP'"; exit 1 ;;
+          esac
+
+          # Refuse to stomp an existing tag (defensive — the compute above
+          # already guarantees a fresh version, but a concurrent tag write
+          # could slip in).
+          if git rev-parse --verify --quiet "refs/tags/$next" >/dev/null; then
+            echo "::error::Tag $next already exists."
+            exit 1
+          fi
+
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Release plan"
+            echo
+            echo "| current | bump | next |"
+            echo "|---|---|---|"
+            echo "| \`$current\` | \`$BUMP\` | \`$next\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve release tag
+        id: tag
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="$NEXT"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          if ! echo "$tag" | grep -qE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+            echo "::error::'$tag' is not a valid release tag."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and push
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        env:
+          NEXT: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -a "$NEXT" -m "Release $NEXT"
+          git push origin "$NEXT"
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer || true
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "${{ env.SNAP_XCODE }}"
 
       - name: Run source test suite
+        if: ${{ !inputs.dry_run }}
         run: xcrun swift test
 
       - name: Build XCFrameworks
+        if: ${{ !inputs.dry_run }}
         run: ./Scripts/build-xcframeworks.sh dist
 
       - name: Verify binary distribution
+        if: ${{ !inputs.dry_run }}
         run: ./Scripts/verify-binary-distribution.sh dist
 
       - name: Generate binary manifest
-        run: ./Scripts/generate-binary-manifest.sh "${GITHUB_REF_NAME}" dist dist/Package.swift
+        if: ${{ !inputs.dry_run }}
+        run: ./Scripts/generate-binary-manifest.sh "${{ steps.tag.outputs.tag }}" dist dist/Package.swift
 
       - name: Create GitHub release
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          # Mark v0.x.y as a pre-release so the "Latest release" badge on
+          # GitHub only moves once we hit v1.0.0.
+          extra_flags=()
+          if [[ "$TAG" == v0.* ]]; then
+            extra_flags+=(--prerelease)
+          fi
+          gh release create "$TAG" \
             dist/*.xcframework.zip \
             dist/checksums.txt \
             dist/Package.swift \
-            --title "$GITHUB_REF_NAME" \
-            --generate-notes
+            --title "$TAG" \
+            --generate-notes \
+            "${extra_flags[@]}"
 
       - name: Publish binary manifest branch
+        if: ${{ !inputs.dry_run }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           BRANCH_DIR="$(mktemp -d)"
           cp dist/Package.swift "$BRANCH_DIR/Package.swift"
@@ -67,9 +216,7 @@ jobs:
           git checkout -q -b binary
           git add Package.swift README.md
           git -c user.name="Release Bot" -c user.email="actions@github.com" \
-            commit -qm "Binary distribution for $GITHUB_REF_NAME"
-          git tag -f "binary-${GITHUB_REF_NAME}"
+            commit -qm "Binary distribution for $TAG"
+          git tag -f "binary-${TAG}"
           git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            binary:binary "binary-${GITHUB_REF_NAME}"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+            binary:binary "binary-${TAG}"
