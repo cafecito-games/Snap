@@ -11,6 +11,7 @@ set -euo pipefail
 DIST_DIR="${1:?usage: verify-binary-distribution.sh <dist-dir>}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERIFY_ROOT="$(mktemp -d)/binary-verify"
+MACOS_DEPLOYMENT_TARGET="15.0"
 
 mkdir -p "$VERIFY_ROOT/SnapBinary" "$VERIFY_ROOT/Consumer"
 
@@ -45,7 +46,26 @@ verify_symlink() {
     fi
 }
 
-echo "==> Verifying extracted framework signatures and symlinks"
+verify_macos_deployment_target() {
+    local framework_path="$1"
+    local framework_name
+    local binary_path
+    local architecture
+    local minimum_os
+
+    framework_name="$(basename "$framework_path" .framework)"
+    binary_path="$framework_path/Versions/A/$framework_name"
+    for architecture in $(lipo -archs "$binary_path"); do
+        minimum_os="$(otool -arch "$architecture" -l "$binary_path" | \
+            awk '$1 == "minos" { print $2; exit }')"
+        if [ "$minimum_os" != "$MACOS_DEPLOYMENT_TARGET" ]; then
+            echo "error: $framework_name ($architecture) declares macOS ${minimum_os:-unknown}; expected $MACOS_DEPLOYMENT_TARGET" >&2
+            exit 1
+        fi
+    done
+}
+
+echo "==> Verifying extracted framework deployment targets, signatures, and symlinks"
 framework_count=0
 while IFS= read -r -d '' framework_path; do
     framework_count=$((framework_count + 1))
@@ -58,6 +78,7 @@ while IFS= read -r -d '' framework_path; do
     if [ -d "$framework_path/Versions/A/Headers" ]; then
         verify_symlink "$framework_path/Headers" "Versions/Current/Headers"
     fi
+    verify_macos_deployment_target "$framework_path"
     codesign --verify --deep --strict --verbose=2 "$framework_path"
 done < <(find "$VERIFY_ROOT/SnapBinary/Frameworks" \
     -type d -name "*.framework" -print0)
@@ -119,8 +140,15 @@ let package = Package(
 MANIFEST
 
 EXPORT_DIR="$VERIFY_ROOT/exported"
+CONSUMER_BUILD_LOG="$VERIFY_ROOT/consumer-build.log"
 echo "==> Running consumer preview tests against the binary distribution"
-(cd "$VERIFY_ROOT/Consumer" && SNAPSHOTS_EXPORT_DIR="$EXPORT_DIR" xcrun swift test)
+(cd "$VERIFY_ROOT/Consumer" && \
+    SNAPSHOTS_EXPORT_DIR="$EXPORT_DIR" xcrun swift test 2>&1 | \
+    tee "$CONSUMER_BUILD_LOG")
+if grep -qE 'built for newer (macOS )?version' "$CONSUMER_BUILD_LOG"; then
+    echo "error: consumer linked a framework requiring a newer macOS version" >&2
+    exit 1
+fi
 
 IMAGE_COUNT="$(ls "$EXPORT_DIR" 2>/dev/null | grep -c '\.png$')"
 if [ "$IMAGE_COUNT" -lt 4 ]; then
