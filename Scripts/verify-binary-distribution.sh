@@ -74,7 +74,7 @@ MANIFEST
 
 EXPORT_DIR="$VERIFY_ROOT/exported"
 echo "==> Running consumer preview tests against the binary distribution"
-(cd "$VERIFY_ROOT/Consumer" && SNAPSHOTS_EXPORT_DIR="$EXPORT_DIR" xcrun swift test -quiet)
+(cd "$VERIFY_ROOT/Consumer" && SNAPSHOTS_EXPORT_DIR="$EXPORT_DIR" xcrun swift test)
 
 IMAGE_COUNT="$(ls "$EXPORT_DIR" 2>/dev/null | grep -c '\.png$')"
 if [ "$IMAGE_COUNT" -lt 4 ]; then
