@@ -194,5 +194,21 @@ xcrun swift test          # unit tests + end-to-end fixture rendering
 SNAPSHOTS_EXPORT_DIR=/tmp/snap-export xcrun swift test   # exercise the export flow
 ```
 
+### Troubleshooting: `plugin for module 'PreviewsMacros' not found`
+
+Always build with `xcrun swift ...`, not bare `swift`. The `#Preview` macro
+plugin (`PreviewsMacros`) ships inside Xcode's platform directory — it is not
+part of the command-line tools or standalone toolchains such as swiftly. If
+`swift test` fails with
+
+```
+external macro implementation type 'PreviewsMacros.SwiftUIView' could not be
+found for macro 'Preview(_:body:)'; plugin for module 'PreviewsMacros' not found
+```
+
+your PATH resolves `swift` to a standalone toolchain (check with
+`which -a swift`). Run `xcrun swift test`, which selects the active Xcode
+toolchain via `xcode-select`, or switch that shell to Xcode's toolchain.
+
 [sentry]: https://docs.sentry.io/product/snapshots/
 [upstream]: https://github.com/getsentry/SnapshotPreviews
