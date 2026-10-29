@@ -194,6 +194,14 @@ xcrun swift test          # unit tests + end-to-end fixture rendering
 SNAPSHOTS_EXPORT_DIR=/tmp/snap-export xcrun swift test   # exercise the export flow
 ```
 
+A complete consumer example lives in [`Examples/DemoApp`](Examples/DemoApp):
+a small module with four `#Preview` declarations, a one-class `SnapTest`
+suite, and per-preview `SnapPreferences` modifiers. Run its export flow with:
+
+```shell
+SNAPSHOTS_EXPORT_DIR=/tmp/demo-snapshots xcrun swift test --package-path Examples/DemoApp
+```
+
 ### Troubleshooting: `plugin for module 'PreviewsMacros' not found`
 
 Always build with `xcrun swift ...`, not bare `swift`. The `#Preview` macro

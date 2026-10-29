@@ -15,3 +15,8 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_26.4.app/Contents/Developer || true
       - name: Run tests
         run: xcrun swift test
+      - name: Run demo project export tests
+        run: |
+          export SNAPSHOTS_EXPORT_DIR="$(mktemp -d)/snapshots"
+          xcrun swift test --package-path Examples/DemoApp
+          test "$(ls "$SNAPSHOTS_EXPORT_DIR" | grep -c '\.png$')" -ge 4
