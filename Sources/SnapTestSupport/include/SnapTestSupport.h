@@ -5,11 +5,13 @@ NS_ASSUME_NONNULL_BEGIN
 /// Creates the invocations that XCTest runs for dynamically generated tests.
 ///
 /// `NSInvocation` is not constructible from Swift, which is why this tiny
-/// Objective-C helper exists at all.
+/// Objective-C helper exists at all. The return type is declared as `id` so
+/// the type never appears in a Swift module interface, where it would fail
+/// to parse for consumers.
 @interface SnapTestInvocationFactory : NSObject
 
 /// Returns an invocation for a `void` method with no arguments.
-+ (NSInvocation *)invocationForSelector:(SEL)selector;
++ (id)invocationForSelector:(SEL)selector;
 
 @end
 

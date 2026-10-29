@@ -61,6 +61,30 @@ dependencies: [
 ]
 ```
 
+### Binary distribution (no compilation)
+
+If you would rather not compile Snap at all — for example on CI runners
+without package caches — use the `binary` branch, whose manifest resolves
+every product to the prebuilt, library-evolution-enabled XCFrameworks
+attached to the latest release:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/cafecito-games/Snap", branch: "binary"),
+]
+```
+
+For a pinned binary dependency, use the `binary-<tag>` tags published
+alongside each release:
+
+```swift
+.package(url: "https://github.com/cafecito-games/Snap", exact: "binary-0.1.0")
+```
+
+Imports are identical in both distributions; the binary artifacts are
+verified in CI by running the [DemoApp](Examples/DemoApp) preview tests
+against the freshly built frameworks.
+
 Requires macOS 15+, Xcode 26, and Swift 6.
 
 ## Generating snapshots

@@ -4,6 +4,7 @@ import Foundation
 ///
 /// Only strings, numbers, booleans, and nested dictionaries of those types can
 /// be encoded, which keeps the sidecar schema stable for downstream consumers.
+@frozen
 public enum SnapshotMetadataValue: Sendable, Equatable, Encodable {
     case string(String)
     case number(Double)

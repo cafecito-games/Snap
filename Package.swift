@@ -12,6 +12,11 @@ let package = Package(
         .library(name: "SnapPreferences", targets: ["SnapPreferences"]),
         // Shared value types exposed through the products above.
         .library(name: "SnapModels", targets: ["SnapModels"]),
+        // Preview discovery and rendering internals, exposed for binary
+        // distribution builds.
+        .library(name: "SnapCore", targets: ["SnapCore"]),
+        // Objective-C runtime support, exposed for binary distribution builds.
+        .library(name: "SnapTestSupport", targets: ["SnapTestSupport"]),
     ],
     targets: [
         .target(name: "SnapModels"),

@@ -5,6 +5,7 @@ import SnapTestSupport
 
 /// One dynamically generated test case awaiting execution.
 @MainActor
+@frozen
 public struct PendingPreviewCase {
     public let container: PreviewContainer
     public let preview: RenderablePreview
@@ -117,7 +118,9 @@ final class DynamicTestRegistry {
             if !added {
                 print("Snap: could not register test method \(selectorName)")
             }
-            return SnapTestInvocationFactory.invocation(for: selector)
+            // The factory is declared as returning `id` so that
+            // NSInvocation never appears in a Swift module interface.
+            return SnapTestInvocationFactory.invocation(for: selector) as AnyObject
         }
         invocationsByClassName[className] = invocations
         return invocations

@@ -1,6 +1,7 @@
 import Foundation
 
 /// Selects the pixel-capture backend used to rasterize a preview.
+@frozen
 public enum SnapshotRenderingMode: Int, Sendable {
     /// Renders the hosting view through `NSView.cacheDisplay`, the default
     /// and most deterministic path.

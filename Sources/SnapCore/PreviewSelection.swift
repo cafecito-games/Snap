@@ -2,6 +2,7 @@ import Foundation
 
 /// Which previews a test run should render. All fields are regex patterns for
 /// names and exact identifiers for modules; `nil` means "no restriction".
+@frozen
 public struct PreviewSelection: Sendable {
     public var includedPreviewNames: [String]?
     public var excludedPreviewNames: [String]?

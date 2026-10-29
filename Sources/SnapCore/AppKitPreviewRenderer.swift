@@ -13,6 +13,8 @@ public final class AppKitPreviewRenderer {
     /// unaffected by this proposal.
     static let defaultProposedSize = NSSize(width: 800, height: 400)
 
+    /// The result of one render pass.
+    @frozen
     public struct Outcome {
         /// The captured image, or `nil` when capture was skipped or failed.
         public let image: NSImage?

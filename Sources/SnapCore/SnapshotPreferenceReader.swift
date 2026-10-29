@@ -3,6 +3,7 @@ import SnapModels
 
 /// The per-preview preferences declared with the `SnapPreferences` modifiers,
 /// read out of the running process after a render.
+@frozen
 public struct SnapshotPreferenceSnapshot: Sendable {
     public static let empty = SnapshotPreferenceSnapshot()
 
