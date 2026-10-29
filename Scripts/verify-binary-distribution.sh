@@ -14,12 +14,58 @@ VERIFY_ROOT="$(mktemp -d)/binary-verify"
 
 mkdir -p "$VERIFY_ROOT/SnapBinary" "$VERIFY_ROOT/Consumer"
 
+echo "==> Verifying archive checksums"
+(cd "$DIST_DIR" && shasum -a 256 -c checksums.txt)
+
 # The stand-in mirrors the manifest Scripts/generate-binary-manifest.sh
 # publishes; frameworks are consumed from the local build output.
 mkdir -p "$VERIFY_ROOT/SnapBinary/Frameworks"
 for zip in "$DIST_DIR"/*.xcframework.zip; do
+    name="$(basename "$zip")"
+    recorded_checksum="$(awk -v zip="$name" '$2 == zip { print $1 }' \
+        "$DIST_DIR/checksums.txt")"
+    computed_checksum="$(swift package compute-checksum "$zip")"
+    if [ -z "$recorded_checksum" ] || [ "$recorded_checksum" != "$computed_checksum" ]; then
+        echo "error: checksum mismatch for $name" >&2
+        exit 1
+    fi
     unzip -q "$zip" -d "$VERIFY_ROOT/SnapBinary/Frameworks"
 done
+
+verify_symlink() {
+    local link="$1"
+    local expected_target="$2"
+    if [ ! -L "$link" ]; then
+        echo "error: expected framework symlink: $link" >&2
+        exit 1
+    fi
+    if [ "$(readlink "$link")" != "$expected_target" ]; then
+        echo "error: unexpected target for $link: $(readlink "$link")" >&2
+        exit 1
+    fi
+}
+
+echo "==> Verifying extracted framework signatures and symlinks"
+framework_count=0
+while IFS= read -r -d '' framework_path; do
+    framework_count=$((framework_count + 1))
+    framework_name="$(basename "$framework_path" .framework)"
+    verify_symlink "$framework_path/Versions/Current" "A"
+    verify_symlink "$framework_path/$framework_name" \
+        "Versions/Current/$framework_name"
+    verify_symlink "$framework_path/Resources" "Versions/Current/Resources"
+    verify_symlink "$framework_path/Modules" "Versions/Current/Modules"
+    if [ -d "$framework_path/Versions/A/Headers" ]; then
+        verify_symlink "$framework_path/Headers" "Versions/Current/Headers"
+    fi
+    codesign --verify --deep --strict --verbose=2 "$framework_path"
+done < <(find "$VERIFY_ROOT/SnapBinary/Frameworks" \
+    -type d -name "*.framework" -print0)
+
+if [ "$framework_count" -eq 0 ]; then
+    echo "error: no frameworks found in binary distribution" >&2
+    exit 1
+fi
 
 cat > "$VERIFY_ROOT/SnapBinary/Package.swift" <<'MANIFEST'
 // swift-tools-version: 6.2

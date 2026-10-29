@@ -17,7 +17,7 @@ OUTPUT="${3:?missing output-file}"
 BASE_URL="https://github.com/cafecito-games/Snap/releases/download/${TAG}"
 
 checksum_for() {
-    awk -v zip="$1.xcframework.zip" '$1 == zip { print $2 }' "$DIST_DIR/checksums.txt"
+    awk -v zip="$1.xcframework.zip" '$2 == zip { print $1 }' "$DIST_DIR/checksums.txt"
 }
 
 declare -a TARGETS=(
@@ -33,6 +33,12 @@ for target in "${TARGETS[@]}"; do
     checksum="$(checksum_for "$target")"
     if [ -z "$checksum" ]; then
         echo "error: no checksum found for $target in $DIST_DIR/checksums.txt" >&2
+        exit 1
+    fi
+    archive="$DIST_DIR/$target.xcframework.zip"
+    computed_checksum="$(swift package compute-checksum "$archive")"
+    if [ "$checksum" != "$computed_checksum" ]; then
+        echo "error: recorded checksum does not match $archive" >&2
         exit 1
     fi
     binary_target_entries+="        .binaryTarget(\n"

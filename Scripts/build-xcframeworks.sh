@@ -107,6 +107,11 @@ sanitize_module() {
     done
 }
 
+verify_framework_signature() {
+    local framework_path="$1"
+    codesign --verify --deep --strict --verbose=2 "$framework_path"
+}
+
 for entry in "${LINK_DEPENDENCIES[@]}"; do
     framework="${entry%%|*}"
     dependency_flags="${entry#*|}"
@@ -168,21 +173,44 @@ MODULEMAP
         ln -shf Versions/Current/Headers "$FRAMEWORK_PATH/Headers"
     fi
 
+    # Linking leaves an ad-hoc Mach-O signature without a framework resource
+    # envelope. Sign the completed bundle so its Info.plist, modules, and
+    # versioned-framework symlinks are all covered by a valid signature.
+    echo "==> $framework: signing framework"
+    codesign --force --sign - --timestamp=none "$FRAMEWORK_PATH"
+    verify_framework_signature "$FRAMEWORK_PATH"
+
     echo "==> $framework: creating XCFramework"
     xcodebuild -create-xcframework \
         -framework "$FRAMEWORK_PATH" \
         -output "$DIST_DIR/$framework.xcframework"
 
+    while IFS= read -r -d '' packaged_framework; do
+        # create-xcframework omits architecture-specific compiled module
+        # files from library-evolution frameworks, so seal the copied bundle
+        # after Xcode has finalized its packaged contents.
+        codesign --force --sign - --timestamp=none "$packaged_framework"
+        verify_framework_signature "$packaged_framework"
+    done < <(find "$DIST_DIR/$framework.xcframework" \
+        -type d -name "*.framework" -print0)
+
     echo "==> $framework: zipping"
-    (cd "$DIST_DIR" && zip -qr "$framework.xcframework.zip" "$framework.xcframework")
+    # -y stores symbolic links as links instead of materializing their targets.
+    (cd "$DIST_DIR" && zip -qry "$framework.xcframework.zip" "$framework.xcframework")
     rm -rf "$DIST_DIR/$framework.xcframework"
 done
 
 echo "==> Checksums"
 for zip in "$DIST_DIR"/*.xcframework.zip; do
     name="$(basename "$zip")"
-    checksum="$(shasum -a 256 "$zip" | awk '{print $1}')"
-    echo "$name $checksum" | tee -a "$DIST_DIR/checksums.txt"
+    checksum="$(swift package compute-checksum "$zip")"
+    shasum_checksum="$(shasum -a 256 "$zip" | awk '{print $1}')"
+    if [ "$checksum" != "$shasum_checksum" ]; then
+        echo "error: SwiftPM and shasum checksums differ for $name" >&2
+        exit 1
+    fi
+    printf '%s  %s\n' "$checksum" "$name" | tee -a "$DIST_DIR/checksums.txt"
 done
+(cd "$DIST_DIR" && shasum -a 256 -c checksums.txt)
 
 echo "==> Done: $DIST_DIR"
