@@ -204,10 +204,10 @@ jobs:
 
               .package(url: "https://github.com/cafecito-games/Snap", branch: "binary")
 
-          For a version-pinned binary dependency, use the matching
-          `binary-<tag>` tag:
+          For a version-pinned binary dependency, use the semver pre-release
+          tag published alongside each release:
 
-              .package(url: "https://github.com/cafecito-games/Snap", exact: "binary-0.1.0")
+              .package(url: "https://github.com/cafecito-games/Snap", exact: "0.0.1-binary")
 
           The source distribution lives on `main`.
           EOF
@@ -217,6 +217,8 @@ jobs:
           git add Package.swift README.md
           git -c user.name="Release Bot" -c user.email="actions@github.com" \
             commit -qm "Binary distribution for $TAG"
-          git tag -f "binary-${TAG}"
+          # The pin tag uses a semver pre-release identifier so consumers can
+          # request it with `.exact("X.Y.Z-binary")`.
+          git tag -f "v${TAG#v}-binary"
           git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            binary:binary "binary-${TAG}"
+            binary:binary "v${TAG#v}-binary"

@@ -74,11 +74,11 @@ dependencies: [
 ]
 ```
 
-For a pinned binary dependency, use the `binary-<tag>` tags published
+For a pinned binary dependency, use the semver pre-release tags published
 alongside each release:
 
 ```swift
-.package(url: "https://github.com/cafecito-games/Snap", exact: "binary-0.1.0")
+.package(url: "https://github.com/cafecito-games/Snap", exact: "0.0.1-binary")
 ```
 
 Imports are identical in both distributions; the binary artifacts are
