@@ -26,6 +26,7 @@ PRODUCTS_DIR="$DERIVED_DATA/Build/Products/Release"
 
 # Universal binaries cover both macOS architectures in one slice.
 ARCHS_SETTING="arm64 x86_64"
+MACOS_DEPLOYMENT_TARGET="15.0"
 # XCTest ships inside the platform's Developer directory rather than the
 # platform SDK itself; its Swift support library sits in the adjacent usr/lib.
 PLATFORM_DEVELOPER_DIR="$(xcrun --sdk macosx --show-sdk-platform-path)/Developer"
@@ -56,6 +57,7 @@ for scheme in "SnapTests" "SnapPreferences"; do
         -derivedDataPath "$DERIVED_DATA" \
         ARCHS="$ARCHS_SETTING" \
         ONLY_ACTIVE_ARCH=NO \
+        MACOSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
         BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
         OTHER_SWIFT_FLAGS="-no-verify-emitted-module-interface" \
         -quiet
@@ -112,6 +114,25 @@ verify_framework_signature() {
     codesign --verify --deep --strict --verbose=2 "$framework_path"
 }
 
+verify_macos_deployment_target() {
+    local framework_path="$1"
+    local framework_name
+    local binary_path
+    local architecture
+    local minimum_os
+
+    framework_name="$(basename "$framework_path" .framework)"
+    binary_path="$framework_path/Versions/A/$framework_name"
+    for architecture in $(lipo -archs "$binary_path"); do
+        minimum_os="$(otool -arch "$architecture" -l "$binary_path" | \
+            awk '$1 == "minos" { print $2; exit }')"
+        if [ "$minimum_os" != "$MACOS_DEPLOYMENT_TARGET" ]; then
+            echo "error: $framework_name ($architecture) declares macOS ${minimum_os:-unknown}; expected $MACOS_DEPLOYMENT_TARGET" >&2
+            exit 1
+        fi
+    done
+}
+
 for entry in "${LINK_DEPENDENCIES[@]}"; do
     framework="${entry%%|*}"
     dependency_flags="${entry#*|}"
@@ -141,11 +162,13 @@ for entry in "${LINK_DEPENDENCIES[@]}"; do
         $dependency_flags \
         -o "$VERSION_A/$framework" \
         -install_name "@rpath/$framework.framework/Versions/A/$framework" \
+        -mmacosx-version-min="$MACOS_DEPLOYMENT_TARGET" \
         -isysroot "$(xcrun --sdk macosx --show-sdk-path)" \
         -F "$FRAMEWORKS_DIR" \
         -F "$XCODE_LIB_FRAMEWORKS" \
         -iframework "$XCODE_LIB_FRAMEWORKS" \
         -L "$XCODE_LIB_DIR"
+    verify_macos_deployment_target "$FRAMEWORK_PATH"
 
     if [ "$framework" = "SnapTestSupport" ]; then
         mkdir -p "$VERSION_A/Headers"
@@ -189,6 +212,7 @@ MODULEMAP
         # create-xcframework omits architecture-specific compiled module
         # files from library-evolution frameworks, so seal the copied bundle
         # after Xcode has finalized its packaged contents.
+        verify_macos_deployment_target "$packaged_framework"
         codesign --force --sign - --timestamp=none "$packaged_framework"
         verify_framework_signature "$packaged_framework"
     done < <(find "$DIST_DIR/$framework.xcframework" \
