@@ -103,7 +103,7 @@ public final class PreviewContainer {
         }
         let withoutModule = typeName.split(separator: ".").dropFirst().joined(separator: ".")
         let words = withoutModule.splitByWords()
-        if words.last == "Previews" {
+        if words.last == "previews" {
             return words.dropLast().joined(separator: " ")
         }
         return words.joined(separator: " ")

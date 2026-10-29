@@ -144,6 +144,51 @@ public struct SyncStatusBanner: View {
     }
 }
 
+public struct InteractiveCounter: View {
+    @State private var count = 0
+
+    public init() {}
+
+    public var body: some View {
+        HStack(spacing: 18) {
+            Button {
+                count -= 1
+            } label: {
+                Image(systemName: "minus")
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Decrease Count")
+
+            VStack(spacing: 2) {
+                Text(count, format: .number)
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                Text("Count")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(minWidth: 64)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Count")
+            .accessibilityValue(count.formatted())
+
+            Button {
+                count += 1
+            } label: {
+                Image(systemName: "plus")
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityLabel("Increase Count")
+        }
+        .padding(24)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
 private extension SyncStatus {
     var isFailure: Bool {
         if case .failed = self {
@@ -188,4 +233,11 @@ private extension SyncStatus {
         .snapTags(["screen": "sync", "severity": "error"])
         .snapDiffThreshold(0.02)
         .snapAdditionalContext(["fixture": "vorbis-refusal"])
+}
+
+#Preview("Interactive Counter") {
+    InteractiveCounter()
+        .padding(24)
+        .snapTags(["component": "counter", "interaction": "stateful"])
+        .snapAdditionalContext(["reset_behavior": "fresh-instance"])
 }

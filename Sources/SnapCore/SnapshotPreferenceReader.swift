@@ -12,7 +12,7 @@ public struct SnapshotPreferenceSnapshot: Sendable {
     public var tags: [String: String]
     public var additionalContext: [String: SnapshotMetadataValue]
 
-    init(
+    package init(
         renderingMode: SnapshotRenderingMode? = nil,
         diffThreshold: Float? = nil,
         tags: [String: String] = [:],
@@ -32,11 +32,28 @@ public struct SnapshotPreferenceSnapshot: Sendable {
 /// reflectively. When the library is absent every lookup safely produces
 /// `nil` and rendering proceeds with default preferences.
 @MainActor
-enum SnapshotPreferenceReader {
+package enum SnapshotPreferenceReader {
+    private static var installedWrapWithPreferences: ((any View) -> any View)?
+    private static var installedReadSnapshot: (() -> SnapshotPreferenceSnapshot)?
+
+    /// Installs a direct bridge for app targets that link SnapCore and
+    /// SnapPreferences together. XCTest-only consumers retain the reflective
+    /// fallback below so SnapCore does not gain a compile-time dependency.
+    package static func install(
+        wrapWithPreferences: @escaping (any View) -> any View,
+        readSnapshot: @escaping () -> SnapshotPreferenceSnapshot
+    ) {
+        installedWrapWithPreferences = wrapWithPreferences
+        installedReadSnapshot = readSnapshot
+    }
+
     /// Wraps a view so preference modifiers write into the shared reader
     /// state. Wrapping also resets the state for the upcoming render.
     static var wrapWithPreferences: ((any View) -> any View)? {
-        locate().map { reader in
+        if let installedWrapWithPreferences {
+            return installedWrapWithPreferences
+        }
+        return locate().map { reader in
             { view in
                 reader.wrap(view)
             }
@@ -44,7 +61,10 @@ enum SnapshotPreferenceReader {
     }
 
     static func readSnapshot() -> SnapshotPreferenceSnapshot {
-        locate()?.readSnapshot() ?? .empty
+        if let installedReadSnapshot {
+            return installedReadSnapshot()
+        }
+        return locate()?.readSnapshot() ?? .empty
     }
 
     private static func locate() -> PreferenceReaderProxy? {

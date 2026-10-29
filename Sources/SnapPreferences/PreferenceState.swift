@@ -49,6 +49,35 @@ final class PreferenceState: NSObject {
     }
 }
 
+/// Gives package targets that read preferences reflectively a direct symbol
+/// reference so the collector is retained by the linker in application builds.
+@MainActor
+package enum SnapPreferencesRuntime {
+    package static func ensureLoaded() {
+        _ = PreferenceState.shared
+    }
+
+    package static func wrap(_ view: any View) -> any View {
+        PreferenceState.shared.wrap(view)
+    }
+
+    package static var renderingMode: SnapshotRenderingMode.RawValue? {
+        PreferenceState.shared.renderingMode
+    }
+
+    package static var diffThreshold: Float? {
+        PreferenceState.shared.diffThreshold
+    }
+
+    package static var tags: [String: String] {
+        PreferenceState.shared.tags
+    }
+
+    package static var additionalContext: [String: SnapshotMetadataValue] {
+        PreferenceState.shared.additionalContext
+    }
+}
+
 // MARK: - Preference keys
 
 struct SnapshotDiffThresholdKey: PreferenceKey {
