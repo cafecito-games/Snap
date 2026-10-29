@@ -1,4 +1,5 @@
 import AppKit
+import CoreFoundation
 import SwiftUI
 import SnapModels
 
@@ -42,26 +43,40 @@ public final class AppKitPreviewRenderer {
                 size: Self.defaultProposedSize
             )
         )
-        if NSApp != nil {
-            window.makeKeyAndOrderFront(nil)
-        }
-        // Without a running application the window still hosts and lays out
-        // its content offscreen, which is all snapshotting needs.
+        // The window only hosts offscreen layout. Ordering it in a running app
+        // would steal focus when SnapGallery renders a thumbnail.
     }
 
     public func render(
         _ preview: RenderablePreview,
         captureImage: Bool = true
     ) -> Outcome {
+        let prepared = prepare(preview)
+        settleLayout()
+        return finish(prepared, captureImage: captureImage)
+    }
+
+    /// Renders from a running application without blocking SwiftUI's commit
+    /// cycle. Preferences such as tags are delivered after control returns to
+    /// the app event loop, so gallery rendering must suspend before capture.
+    package func renderForGallery(
+        _ preview: RenderablePreview,
+        captureImage: Bool = true
+    ) async -> Outcome {
+        let prepared = prepare(preview)
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(50))
+        return finish(prepared, captureImage: captureImage)
+    }
+
+    private func prepare(_ preview: RenderablePreview) -> PreparedRender {
         let schemeBox = PreferredSchemeBox()
 
         var rootView: AnyView = AnyView(
-            PreferredSchemeAdapter(
-                content: AnyView(preview.makeView()),
-                schemeBox: schemeBox
-            )
+            PreviewHostingView(preview: preview) { scheme in
+                schemeBox.value = scheme
+            }
         )
-        var preferences = SnapshotPreferenceSnapshot.empty
         if let wrapWithPreferences = SnapshotPreferenceReader.wrapWithPreferences {
             rootView = AnyView(wrapWithPreferences(rootView))
         }
@@ -85,14 +100,25 @@ public final class AppKitPreviewRenderer {
             height: fittingSize.height
         )
         hostingController.view.layoutSubtreeIfNeeded()
-        settleLayout()
+        hostingController.view.needsDisplay = true
+        hostingController.view.displayIfNeeded()
 
-        preferences = SnapshotPreferenceReader.readSnapshot()
+        return PreparedRender(
+            hostingController: hostingController,
+            schemeBox: schemeBox
+        )
+    }
+
+    private func finish(
+        _ prepared: PreparedRender,
+        captureImage: Bool
+    ) -> Outcome {
+        let preferences = SnapshotPreferenceReader.readSnapshot()
 
         guard captureImage else {
             return Outcome(
                 image: nil,
-                colorScheme: schemeBox.value,
+                colorScheme: prepared.schemeBox.value,
                 preferences: preferences,
                 captureError: nil
             )
@@ -100,21 +126,29 @@ public final class AppKitPreviewRenderer {
 
         let mode = preferences.renderingMode ?? .view
         do {
-            let image = try capture(mode: mode, hostingController: hostingController)
+            let image = try capture(
+                mode: mode,
+                hostingController: prepared.hostingController
+            )
             return Outcome(
                 image: image,
-                colorScheme: schemeBox.value,
+                colorScheme: prepared.schemeBox.value,
                 preferences: preferences,
                 captureError: nil
             )
         } catch {
             return Outcome(
                 image: nil,
-                colorScheme: schemeBox.value,
+                colorScheme: prepared.schemeBox.value,
                 preferences: preferences,
                 captureError: error
             )
         }
+    }
+
+    private struct PreparedRender {
+        let hostingController: NSHostingController<AnyView>
+        let schemeBox: PreferredSchemeBox
     }
 
     private func proposedSize(for layout: PreviewLayout) -> NSSize {
@@ -140,10 +174,7 @@ public final class AppKitPreviewRenderer {
     /// Gives asynchronous layout and preference propagation one turn of the
     /// run loop to settle before pixels are captured.
     private func settleLayout() {
-        RunLoop.current.run(
-            mode: .default,
-            before: Date().addingTimeInterval(0.05)
-        )
+        CFRunLoopRunInMode(CFRunLoopMode.defaultMode, 0.05, false)
     }
 
     private func capture(
@@ -201,22 +232,4 @@ final class SnapshotWindow: NSWindow {
 /// appearance inside an offscreen window.
 private final class PreferredSchemeBox {
     var value: ColorScheme?
-}
-
-private struct PreferredSchemeAdapter: View {
-    @State private var preferredScheme: ColorScheme?
-    @Environment(\.colorScheme) private var ambientScheme
-
-    let content: AnyView
-    let schemeBox: PreferredSchemeBox
-
-    var body: some View {
-        content
-            .onPreferenceChange(PreferredColorSchemeKey.self) { value in
-                preferredScheme = value
-                schemeBox.value = value
-            }
-            .environment(\.colorScheme, preferredScheme ?? ambientScheme)
-            .preferredColorScheme(nil)
-    }
 }

@@ -12,6 +12,9 @@ let package = Package(
         .library(name: "SnapPreferences", targets: ["SnapPreferences"]),
         // Shared value types exposed through the products above.
         .library(name: "SnapModels", targets: ["SnapModels"]),
+        // Link this product to a trusted internal macOS app to browse its
+        // compiled SwiftUI previews in a native component gallery.
+        .library(name: "SnapGallery", targets: ["SnapGallery"]),
         // Preview discovery and rendering internals, exposed for binary
         // distribution builds.
         .library(name: "SnapCore", targets: ["SnapCore"]),
@@ -27,6 +30,13 @@ let package = Package(
             name: "SnapPreferences",
             dependencies: ["SnapModels"]),
         .target(
+            name: "SnapGallery",
+            dependencies: [
+                "SnapCore",
+                "SnapModels",
+                "SnapPreferences",
+            ]),
+        .target(
             name: "SnapTestSupport",
             publicHeadersPath: "include"),
         .target(
@@ -38,7 +48,7 @@ let package = Package(
             ]),
         .testTarget(
             name: "SnapTestsTests",
-            dependencies: ["SnapTests", "SnapCore", "SnapPreferences"]),
+            dependencies: ["SnapTests", "SnapCore", "SnapGallery", "SnapPreferences"]),
     ],
     swiftLanguageModes: [.v6],
 )

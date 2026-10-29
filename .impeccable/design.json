@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T22:42:23Z",
+  "title": "Design System: Snap Gallery",
+  "extensions": {
+    "colorMeta": {
+      "window-background": {
+        "role": "neutral",
+        "displayName": "Window Ground",
+        "nativeSemantic": "NSColor.windowBackgroundColor"
+      },
+      "control-background": {
+        "role": "neutral",
+        "displayName": "Control Ground",
+        "nativeSemantic": "NSColor.controlBackgroundColor"
+      },
+      "text-background": {
+        "role": "neutral",
+        "displayName": "Text Ground",
+        "nativeSemantic": "NSColor.textBackgroundColor"
+      },
+      "label-primary": {
+        "role": "neutral",
+        "displayName": "Primary Label",
+        "nativeSemantic": "SwiftUI foregroundStyle(.primary)"
+      },
+      "label-secondary": {
+        "role": "neutral",
+        "displayName": "Secondary Label",
+        "nativeSemantic": "SwiftUI foregroundStyle(.secondary)"
+      },
+      "selection-accent": {
+        "role": "primary",
+        "displayName": "System Selection Accent",
+        "nativeSemantic": "Native List selection using the user's macOS accent color"
+      },
+      "selection-label": {
+        "role": "neutral",
+        "displayName": "Selected Label",
+        "nativeSemantic": "Native List selected-content foreground"
+      },
+      "separator": {
+        "role": "neutral",
+        "displayName": "Hairline Separator",
+        "nativeSemantic": "NSColor.separatorColor"
+      },
+      "proofing-canvas": {
+        "role": "neutral",
+        "displayName": "Proofing Canvas",
+        "nativeSemantic": "NSColor.galleryCanvasBackground: deviceWhite 0.91 in Aqua; deviceWhite 0.13 in Dark Aqua"
+      },
+      "proof-white": {
+        "role": "neutral",
+        "displayName": "Proof White",
+        "nativeSemantic": "SwiftUI Color.white"
+      },
+      "proof-black": {
+        "role": "neutral",
+        "displayName": "Proof Black",
+        "nativeSemantic": "SwiftUI Color.black"
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Inspector Title",
+        "purpose": "Selected story name in the inspector header.",
+        "nativeSemantic": "SwiftUI Font.title3.weight(.semibold)"
+      },
+      "headline": {
+        "displayName": "Section Heading",
+        "purpose": "Inspector section labels.",
+        "nativeSemantic": "SwiftUI Font.headline"
+      },
+      "body": {
+        "displayName": "Story Name",
+        "purpose": "Named preview states in the contact sheet.",
+        "nativeSemantic": "SwiftUI Font.body.weight(.medium)"
+      },
+      "label": {
+        "displayName": "Metadata Label",
+        "purpose": "Layout summaries, provenance, values, counts, and status.",
+        "nativeSemantic": "SwiftUI Font.subheadline and Font.caption"
+      },
+      "numeric": {
+        "displayName": "Numeric Readout",
+        "purpose": "Stable-width changing values such as zoom percentage.",
+        "nativeSemantic": "SwiftUI Font.callout.monospacedDigit()"
+      }
+    },
+    "shadows": [
+      {
+        "name": "live-specimen",
+        "value": "black at 12% opacity, radius 18pt, x 0pt, y 7pt",
+        "purpose": "Separates the selected live preview from the proofing field.",
+        "nativeSemantic": ".shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 7)"
+      }
+    ],
+    "nativeLayout": {
+      "minimumWindow": "900 × 560pt",
+      "sidebarColumn": "190–300pt; 230pt ideal",
+      "storyColumn": "230–360pt; 280pt ideal",
+      "inspectorColumn": "240–360pt; 280pt ideal",
+      "specimenInset": "80pt",
+      "zoomRange": "30%–200% in 10% steps"
+    },
+    "nativeControls": {
+      "framework": "SwiftUI on macOS 15+",
+      "controls": [
+        "NavigationSplitView",
+        "List",
+        "ControlGroup",
+        "Button",
+        "Menu",
+        "Picker",
+        "searchable",
+        "inspector",
+        "ContentUnavailableView",
+        "ProgressView"
+      ],
+      "iconography": "SF Symbols"
+    }
+  },
+  "components": [
+    {
+      "name": "Sidebar Navigation Row",
+      "kind": "nav",
+      "description": "A compact native component row with a secondary stack icon, one-line name, and monospaced story count.",
+      "html": "<button class=\"ds-sidebar-row\" aria-current=\"true\"><svg class=\"ds-sidebar-icon\" aria-hidden=\"true\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.25\"><rect x=\"2.5\" y=\"6.5\" width=\"9\" height=\"7\" rx=\"1\"/><path d=\"M5 4h7.5a1 1 0 0 1 1 1v6\"/><path d=\"M7.5 1.5H13a1 1 0 0 1 1 1V8\"/></svg><span class=\"ds-sidebar-name\">Component</span><span class=\"ds-sidebar-count\">4</span></button>",
+      "css": ".ds-sidebar-row { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; border: 0; border-radius: 5px; padding: 4px 7px; background: SelectedItem; color: SelectedItemText; font: 13px system-ui; text-align: left; } .ds-sidebar-row:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; } .ds-sidebar-icon { width: 16px; height: 16px; opacity: .7; } .ds-sidebar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-sidebar-count { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .72; }"
+    },
+    {
+      "name": "Story Contact-Sheet Row",
+      "kind": "custom",
+      "refersTo": "story-row",
+      "description": "A scanable preview-state row pairing a fixed specimen thumbnail with name and layout metadata.",
+      "html": "<button class=\"ds-story-row\"><span class=\"ds-story-thumb\" aria-hidden=\"true\"><span class=\"ds-story-sample\"></span></span><span class=\"ds-story-copy\"><strong>Default</strong><small>Size that fits</small></span></button>",
+      "css": ".ds-story-row { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; padding: 5px 0; background: transparent; color: CanvasText; font-family: system-ui; text-align: left; } .ds-story-row:hover { background: color-mix(in srgb, CanvasText 5%, transparent); } .ds-story-row:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; } .ds-story-thumb { width: 92px; height: 62px; flex: none; display: grid; place-items: center; overflow: hidden; border: .5px solid ButtonBorder; border-radius: 6px; background: Field; } .ds-story-sample { width: 52px; height: 24px; border-radius: 4px; background: ButtonFace; border: 1px solid ButtonBorder; } .ds-story-copy { display: grid; gap: 4px; min-width: 0; } .ds-story-copy strong { font-size: 13px; font-weight: 500; } .ds-story-copy small { color: GrayText; font-size: 11px; white-space: nowrap; }"
+    },
+    {
+      "name": "Story Thumbnail",
+      "kind": "card",
+      "refersTo": "story-thumbnail",
+      "description": "The fixed thumbnail well used for rendered images, loading indicators, and errors.",
+      "html": "<div class=\"ds-story-thumbnail\" role=\"img\" aria-label=\"Preview thumbnail\"><span class=\"ds-thumbnail-specimen\">Aa</span></div>",
+      "css": ".ds-story-thumbnail { width: 92px; height: 62px; display: grid; place-items: center; overflow: hidden; border: .5px solid ButtonBorder; border-radius: 6px; background: Field; color: FieldText; } .ds-thumbnail-specimen { padding: 5px 9px; border: 1px solid ButtonBorder; border-radius: 4px; background: Canvas; font: 12px system-ui; }"
+    },
+    {
+      "name": "Proofing Canvas",
+      "kind": "custom",
+      "description": "The dominant neutral work field with optional grid and one elevated live specimen.",
+      "html": "<div class=\"ds-proofing-canvas\"><div class=\"ds-live-specimen\">Live component</div></div>",
+      "css": ".ds-proofing-canvas { min-width: 420px; min-height: 260px; display: grid; place-items: center; padding: 80px; color-scheme: light dark; background: light-dark(rgb(232 232 232), rgb(33 33 33)); } .ds-live-specimen { padding: 28px 36px; background: Canvas; color: CanvasText; font: 13px system-ui; box-shadow: 0 7px 36px rgba(0, 0, 0, .12); }"
+    },
+    {
+      "name": "Toolbar Control Group",
+      "kind": "button",
+      "description": "Native canvas operations grouped compactly without branded fills or decorative treatment.",
+      "html": "<div class=\"ds-toolbar-group\" role=\"group\" aria-label=\"Zoom\"><button aria-label=\"Zoom out\">−</button><output>100%</output><button aria-label=\"Zoom in\">+</button></div>",
+      "css": ".ds-toolbar-group { display: inline-flex; align-items: stretch; overflow: hidden; border: 1px solid ButtonBorder; border-radius: 6px; background: ButtonFace; color: ButtonText; font: 13px system-ui; } .ds-toolbar-group button { width: 28px; border: 0; background: transparent; color: inherit; font: inherit; } .ds-toolbar-group button:hover { background: color-mix(in srgb, ButtonText 8%, transparent); } .ds-toolbar-group button:focus-visible { outline: 2px solid AccentColor; outline-offset: -2px; } .ds-toolbar-group output { min-width: 42px; display: grid; place-items: center; border-inline: 1px solid ButtonBorder; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Inspector Section",
+      "kind": "custom",
+      "refersTo": "inspector-section",
+      "description": "A flat metadata section separated by a top hairline and compact labeled values.",
+      "html": "<section class=\"ds-inspector-section\"><h3>Source</h3><dl><dt>Location</dt><dd>DemoViews.swift:24</dd></dl></section>",
+      "css": ".ds-inspector-section { width: 248px; padding: 16px; border-top: .5px solid ButtonBorder; background: ButtonFace; color: CanvasText; font-family: system-ui; } .ds-inspector-section h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; } .ds-inspector-section dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; margin: 0; font-size: 11px; } .ds-inspector-section dt { color: CanvasText; } .ds-inspector-section dd { min-width: 0; margin: 0; color: GrayText; text-align: right; overflow-wrap: anywhere; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Native Proofing Table",
+    "overview": "Snap Gallery is a quiet macOS workspace for examining live component specimens. Its information architecture is as direct as Storybook—catalog, stories, canvas, metadata—but its materials, density, controls, and behavior belong unmistakably to the Mac. Navigation recedes into system sidebars and lists so the selected component remains the visual hero.\n\nThe visual system is restrained and technical: dynamic system neutrals, compact SF typography, hairline structure, and one system-controlled selection accent. The large proofing field supplies the only deliberate stage, while metadata and canvas operations stay close at hand without becoming dashboard chrome.",
+    "keyCharacteristics": [
+      "Native macOS split-view hierarchy rather than a browser-shaped shell.",
+      "A component-first proofing canvas with stable framing and generous working space.",
+      "System semantic colors and controls that adapt automatically to appearance and accessibility settings.",
+      "Dense, aligned navigation and metadata with minimal decoration.",
+      "One elevated live specimen; surrounding surfaces remain flat."
+    ],
+    "rules": [
+      {
+        "name": "The System Owns Color Rule",
+        "body": "Use dynamic macOS semantic colors for interface chrome and selection. Do not freeze those roles into brand hex values.",
+        "section": "colors"
+      },
+      {
+        "name": "The Canvas Exception Rule",
+        "body": "Fixed white and black are allowed only when the user deliberately selects them as specimen-testing conditions.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic Type Rule",
+        "body": "Preserve SwiftUI text styles so the gallery follows macOS typography and accessibility behavior; do not substitute fixed point sizes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Component Owns the Room Rule",
+        "body": "Preserve the canvas as the widest region; navigation and metadata columns may clarify the specimen but must not visually outrank it.",
+        "section": "layout"
+      },
+      {
+        "name": "The One Lift Rule",
+        "body": "Elevate the live specimen only. Sidebar rows, story rows, inspector sections, and tool controls remain native and flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Native Geometry Rule",
+        "body": "Let macOS controls supply their own corner behavior; add a custom radius only when content clipping requires it.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do use native split views, lists, inspectors, toolbars, menus, search, empty states, and accessibility semantics.",
+      "Do keep the selected component state live, centered, and visually dominant.",
+      "Do use semantic system colors and SwiftUI text styles so light, dark, high-contrast, and user-accent settings remain coherent.",
+      "Do use hairlines, alignment, and restrained tonal shifts to organize dense engineering information.",
+      "Do reserve fixed white, black, checkerboard, and grid treatments for explicit proofing tasks."
+    ],
+    "donts": [
+      "Don't turn the catalog into a dashboard of decorative cards.",
+      "Don't imitate browser Storybook chrome or introduce web-navigation conventions.",
+      "Don't add branded color fills, gradients, ornamental imagery, or display typography to the application chrome.",
+      "Don't elevate navigation or metadata surfaces; the live preview is the single lifted object.",
+      "Don't expose implementation metadata at the expense of the specimen's working area."
+    ]
+  }
+}

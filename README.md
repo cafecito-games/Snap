@@ -31,7 +31,7 @@ final class MyModulePreviewTests: SnapTest {}
   <img src="docs/hero-snapshots.png" width="856" alt="Four preview snapshots exported by Snap: a gradient player card in light and dark appearance, an achievement row list, and an error banner">
 </p>
 
-*Every image above is real output: the four `#Preview` declarations of the
+*Every image above is real output from the
 [`Examples/DemoApp`](Examples/DemoApp) module, exported by one empty `SnapTest`
 subclass.*
 
@@ -222,6 +222,36 @@ example through an environment variable your subclass reads) to re-render only
 a chosen subset. This mode is mutually exclusive with
 `SNAPSHOTS_EXPORT_DIR`.
 
+## Browsing previews in Snap Gallery
+
+Link the `SnapGallery` product to a trusted internal macOS app to browse the
+SwiftUI previews compiled into that process. The gallery groups previews by
+module and declaring file or provider, renders a lazy thumbnail contact sheet,
+and opens the selected preview as a fresh, interactive SwiftUI view.
+
+```swift
+import SnapGallery
+import SwiftUI
+
+struct DeveloperToolsView: View {
+    var body: some View {
+        SnapGallery(includedModules: ["EditorWorkspace"])
+    }
+}
+```
+
+The host app must link or reference every module whose previews it should show.
+Use a Debug-like build configuration: optimized builds may remove preview
+declarations and runtime metadata. Only expose the gallery in trusted internal
+builds because previews can contain unfinished UI, fixtures, and development
+data.
+
+Run the repository example with:
+
+```shell
+xcrun swift run --package-path Examples/DemoApp DemoGallery
+```
+
 ## Customizing previews
 
 Link the target that declares your previews to `SnapPreferences` and annotate
@@ -317,7 +347,7 @@ SNAPSHOTS_EXPORT_DIR=/tmp/snap-export xcrun swift test   # exercise the export f
 ```
 
 A complete consumer example lives in [`Examples/DemoApp`](Examples/DemoApp):
-a small module with four `#Preview` declarations, a one-class `SnapTest`
+a small module with five `#Preview` declarations, a one-class `SnapTest`
 suite, and per-preview `SnapPreferences` modifiers. Run its export flow with:
 
 ```shell
