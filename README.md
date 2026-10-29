@@ -14,8 +14,8 @@
 Snap discovers the SwiftUI previews in your built modules — both `#Preview`
 macros and `PreviewProvider` types — turns each one into a real XCTest method,
 renders it offscreen, and gives you the pixels: attached to the test result in
-Xcode, or exported as PNG + JSON metadata for visual-diff tooling such as
-[Sentry Snapshots].
+Xcode, or exported to disk as PNG + JSON metadata for any visual regression
+workflow.
 
 You write **no test methods, no image assertions, no device definitions**.
 Write previews like you already do; Snap makes them executable artifacts.
@@ -43,7 +43,7 @@ subclass.*
 |---|---|
 | **Local, in Xcode** | Run your `SnapTest` class; every preview appears as a test with its PNG attached to the `.xcresult`. Failing previews (missing `@EnvironmentObject`, crashing layout) fail the test. |
 | **CI, fast feedback** | Inherit from `SnapLayoutTest` instead — lays out every preview without pixel capture, catching crashes for a fraction of the cost. |
-| **CI, visual diffing** | Set `SNAPSHOTS_EXPORT_DIR`; Snap writes one PNG + one JSON sidecar per preview, ready for `sentry-cli build snapshots` or your own differ. |
+| **CI, visual diffing** | Set `SNAPSHOTS_EXPORT_DIR`; Snap writes one PNG + one JSON sidecar per preview — a self-describing artifact directory you can diff with any tool. |
 
 ## Installation
 
@@ -159,15 +159,12 @@ For every rendered preview, two files are written:
 | `tags` | Key-value tags, from `.snapTags(...)`. |
 | `context` | Test name, preview metadata (file, line, color scheme, …), and any custom context. |
 
-The sidecar format matches what [`sentry-cli build snapshots`][sentry-cli]
-expects, so CI upload is one step:
-
-```shell
-sentry-cli build snapshots "$PWD/snapshot-images" \
-  --auth-token "$SENTRY_AUTH_TOKEN" \
-  --app-id com.example.MyApp \
-  --project my-mac-project
-```
+The export directory is self-describing and stable across runs: deterministic
+file names make before/after comparison a plain directory diff, while the
+sidecars carry the identity and provenance of every image — source file and
+line, display name, grouping key, tags, and thresholds — so downstream tooling
+can group, filter, and evaluate snapshots without knowing anything about where
+they came from.
 
 ### Example sidecar
 
@@ -335,7 +332,5 @@ Issues and pull requests are welcome. For code changes:
 [MIT](LICENSE) — with retained attribution to
 [getsentry/SnapshotPreviews][upstream], from which this project is derived.
 
-[sentry snapshots]: https://docs.sentry.io/product/snapshots/
-[sentry-cli]: https://docs.sentry.io/cli/installation/
 [upstream]: https://github.com/getsentry/SnapshotPreviews
 [uziredit]: https://github.com/cafecito-games/UzirEdit

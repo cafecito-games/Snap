@@ -4,7 +4,7 @@ import SnapModels
 
 final class SnapshotExportSidecarTests: XCTestCase {
 
-    func testSidecarEncodesSentryCompatibleSchema() throws {
+    func testSidecarEncodesDocumentedSidecarSchema() throws {
         let sidecar = SnapshotExportCoordinator.Sidecar(
             .init(
                 imageFileName: "Module_Fixtures.swift_Greeting.png",
