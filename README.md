@@ -1,31 +1,71 @@
-# Snap
+<div align="center">
 
-📸 Snapshot every Xcode preview on macOS — with zero test code.
+# 📸 Snap
 
-Snap discovers the SwiftUI previews in your built modules (`#Preview` macros
-and `PreviewProvider` types), turns each one into a real XCTest method, renders
-it offscreen, and either attaches the PNG to the test result or writes it to
-disk for visual-diff tooling such as [Sentry Snapshots][sentry].
+**Snapshot every Xcode preview on macOS — with zero test code.**
 
-Snap is a macOS-only reimplementation of [SnapshotPreviews][upstream]
-(see `LICENSE` for attribution), rebuilt as a pure source package for the
-needs of the UzirEdit project.
+[![CI](https://github.com/cafecito-games/Snap/actions/workflows/ci.yml/badge.svg)](https://github.com/cafecito-games/Snap/actions/workflows/ci.yml)
+[![Platform](https://img.shields.io/badge/platform-macOS%2015%2B-blue)](https://swiftpackageindex.com/cafecito-games/Snap)
+[![Swift](https://img.shields.io/badge/Swift-6-orange)](https://swiftpackageindex.com/cafecito-games/Snap)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
+
+</div>
+
+Snap discovers the SwiftUI previews in your built modules — both `#Preview`
+macros and `PreviewProvider` types — turns each one into a real XCTest method,
+renders it offscreen, and gives you the pixels: attached to the test result in
+Xcode, or exported as PNG + JSON metadata for visual-diff tooling such as
+[Sentry Snapshots].
+
+You write **no test methods, no image assertions, no device definitions**.
+Write previews like you already do; Snap makes them executable artifacts.
+
+```swift
+import SnapTests
+
+final class MyModulePreviewTests: SnapTest {}
+// → 1 XCTest method per #Preview in your module, each rendering a PNG
+```
+
+<p align="center">
+  <img src="docs/hero-snapshots.png" width="856" alt="Four preview snapshots exported by Snap: a gradient player card in light and dark appearance, an achievement row list, and an error banner">
+</p>
+
+*Every image above is real output: the four `#Preview` declarations of the
+[`Examples/DemoApp`](Examples/DemoApp) module, exported by one empty `SnapTest`
+subclass.*
+
+---
+
+## How Snap fits in your workflow
+
+| | |
+|---|---|
+| **Local, in Xcode** | Run your `SnapTest` class; every preview appears as a test with its PNG attached to the `.xcresult`. Failing previews (missing `@EnvironmentObject`, crashing layout) fail the test. |
+| **CI, fast feedback** | Inherit from `SnapLayoutTest` instead — lays out every preview without pixel capture, catching crashes for a fraction of the cost. |
+| **CI, visual diffing** | Set `SNAPSHOTS_EXPORT_DIR`; Snap writes one PNG + one JSON sidecar per preview, ready for `sentry-cli build snapshots` or your own differ. |
 
 ## Installation
 
-Add the package to your project:
+**Xcode:** add the package `https://github.com/cafecito-games/Snap` to your
+project, then link products to targets:
+
+- Your **XCTest target** → `SnapTests`
+- The target that **declares the previews** (your app or feature module) → `SnapPreferences`, *optional*, only if you use the per-preview modifiers
+
+**Package.swift:**
 
 ```swift
-.package(url: "https://github.com/CafecitoGames/Snap", from: "0.1.0")
+dependencies: [
+    .package(url: "https://github.com/cafecito-games/Snap", from: "0.1.0"),
+]
 ```
 
-Link your **XCTest target** to the `SnapTests` product. Link the target that
-**declares the previews** (usually your app or framework target) to
-`SnapPreferences` if you want per-preview customization.
+Requires macOS 15+, Xcode 26, and Swift 6.
 
 ## Generating snapshots
 
-Create one test class that inherits from `SnapTest`. There are no test methods
+Create a test class that inherits from `SnapTest`. There are no test methods
 to write — they are generated at runtime, one per discovered preview:
 
 ```swift
@@ -33,8 +73,9 @@ import SnapTests
 import EditorWorkspace
 
 final class EditorWorkspacePreviewTests: SnapTest {
+
     // Optional: render only previews whose names match these regex patterns.
-    // `nil` renders every preview.
+    // `nil` (the default) renders every preview.
     override class func includedPreviews() -> [String]? {
         nil
     }
@@ -56,25 +97,41 @@ final class EditorWorkspacePreviewTests: SnapTest {
 }
 ```
 
-Run the test class in Xcode and each preview appears as a test with its PNG
-attached to the result bundle.
+Run it, and each preview shows up as a readable test:
 
-`#Preview` previews are named `Module/File.swift:Display Name`; previews from
-`PreviewProvider` types are named by their fully-qualified type name. Both
-forms match as regular expressions in the filters above.
+```
+Test Case '-[EditorWorkspacePreviewTests test Project Processing/Regular 0]' passed
+Test Case '-[EditorWorkspacePreviewTests test Project Processing/Dark 1]' passed
+Test Case '-[EditorWorkspacePreviewTests test Content Browser Row/Selected 2]' passed
+...
+```
+
+By default each render is attached to the test result as a PNG. Click any test
+in Xcode's report navigator to see the image.
+
+**How previews are named.** `#Preview` previews are named
+`Module/File.swift:Display Name`; `PreviewProvider` previews by their
+fully-qualified type name. Both forms are treated as regular expressions by
+the name filters. In exported file names, an unnamed `#Preview` falls back to
+its source line — for example
+`EditorWorkspace_WorkspaceView.swift_line-42.png` — so every export has a
+stable, collision-free name across runs.
 
 ### Layout-only checks
 
-Inherit from `SnapLayoutTest` instead of `SnapTest` to lay out every preview
-without capturing pixels. It runs much faster and still catches crashes such
-as a missing `@EnvironmentObject`, giving you preview coverage without image
-cost.
+Inherit from `SnapLayoutTest` to exercise every preview's layout without
+capturing pixels. It runs much faster and still catches crashes such as a
+missing `@EnvironmentObject`, giving you *preview coverage* without image
+cost:
+
+```swift
+final class EditorWorkspaceLayoutTests: SnapLayoutTest {}
+```
 
 ## Exporting snapshots for CI
 
-By default each rendered preview is attached to the `.xcresult` bundle as a
-PNG. To write the images (plus JSON metadata sidecars) to a directory instead,
-set `SNAPSHOTS_EXPORT_DIR` on the test invocation:
+Set `SNAPSHOTS_EXPORT_DIR` on the test invocation to write images and
+metadata directly to disk instead of the `.xcresult` bundle:
 
 ```shell
 TEST_RUNNER_SNAPSHOTS_EXPORT_DIR="$PWD/snapshot-images" \
@@ -84,21 +141,26 @@ xcodebuild test \
 ```
 
 The `TEST_RUNNER_` prefix is how `xcodebuild` forwards an environment variable
-into the test runner process; Snap reads the variable without the prefix. For
-every rendered preview two files are written:
+into the test runner process; Snap reads the variable without the prefix.
+Encoding happens on a background queue and is drained when the test bundle
+finishes, so rendering one preview never waits on the previous one's PNG
+compression.
 
-- `<name>.png` — the rendered preview image.
-- `<name>.json` — metadata sidecar:
+For every rendered preview, two files are written:
+
+- **`<name>.png`** — the rendered preview image at the display's backing scale
+- **`<name>.json`** — a metadata sidecar:
 
 | Field | Description |
 | --- | --- |
-| `display_name` | Snapshot name shown downstream. |
-| `group` | Grouping key derived from the declaring file or type. |
+| `display_name` | Snapshot name shown downstream, from the preview's display name. |
+| `group` | Grouping key derived from the declaring file (or type). |
 | `diff_threshold` | Allowed visual difference, from `.snapDiffThreshold(...)`. |
 | `tags` | Key-value tags, from `.snapTags(...)`. |
-| `context` | Test name, preview metadata, and any custom context. |
+| `context` | Test name, preview metadata (file, line, color scheme, …), and any custom context. |
 
-The sidecar format matches what `sentry-cli build snapshots` expects:
+The sidecar format matches what [`sentry-cli build snapshots`][sentry-cli]
+expects, so CI upload is one step:
 
 ```shell
 sentry-cli build snapshots "$PWD/snapshot-images" \
@@ -107,11 +169,36 @@ sentry-cli build snapshots "$PWD/snapshot-images" \
   --project my-mac-project
 ```
 
+### Example sidecar
+
+```json
+{
+  "context" : {
+    "fixture" : "vorbis-refusal",
+    "preview" : {
+      "container_display_name" : "demo views",
+      "container_type_name" : "DemoKit.$s7DemoKit0020DemoViewsswift_odAJdfMX184_0_08_8FA...",
+      "display_name" : "Sync Banner Failed",
+      "index" : 0,
+      "line" : 185,
+      "orientation" : "portrait"
+    },
+    "test_name" : "-[DemoKitPreviewTests test Sync Banner Failed 3]"
+  },
+  "diff_threshold" : 0.02,
+  "display_name" : "Sync Banner Failed",
+  "group" : "DemoKit\/DemoViews.swift",
+  "tags" : { "screen" : "sync", "severity" : "error" }
+}
+```
+
 ### Listing image names without rendering
 
 For selective-testing workflows, set `SNAPSHOTS_ALL_IMAGE_NAMES_FILE` to write
 the logical `.png` file names of every discovered preview to a file, skipping
-rendering entirely. This mode is mutually exclusive with
+rendering entirely. Feed that list back as `includedPreviews()` patterns (for
+example through an environment variable your subclass reads) to re-render only
+a chosen subset. This mode is mutually exclusive with
 `SNAPSHOTS_EXPORT_DIR`.
 
 ## Customizing previews
@@ -127,25 +214,25 @@ import SnapPreferences
         .snapTags(["screen": "map"])
         .snapAdditionalContext(["fixture": "city-route"])
         .snapDiffThreshold(0.05)
-        .snapRenderingMode(.layer)
 }
 ```
 
-| Modifier | Effect |
-| --- | --- |
-| `.snapDiffThreshold(0.05)` | Allows up to 5% changed pixels before the image is flagged downstream. |
-| `.snapTags(["area": "checkout"])` | Adds searchable tags to the sidecar. Repeated modifiers merge; later keys win. |
-| `.snapAdditionalContext(["fixture": "loaded"])` | Adds fields to the sidecar `context` object. Supported values: strings, booleans, finite numbers, and nested dictionaries. Custom keys override generated ones. |
-| `.snapRenderingMode(.layer)` | Captures through the layer tree instead of `NSView.cacheDisplay` when the default path mis-renders content. |
+| Modifier | Use it when | Effect on the snapshot |
+| --- | --- | --- |
+| `.snapDiffThreshold(0.05)` | A preview has small expected pixel differences. | Allows up to 5% changed pixels before being flagged downstream. |
+| `.snapTags(["area": "checkout"])` | You want searchable labels. | Adds top-level `tags` to the sidecar. Repeated modifiers merge; later keys win. |
+| `.snapAdditionalContext(["fixture": "loaded"])` | You want extra sidecar metadata. | Adds fields to the sidecar `context`. Strings, booleans, finite numbers, and nested dictionaries are supported; custom keys override generated ones. |
+| `.snapRenderingMode(.layer)` | The default capture mis-renders content. | Captures through the layer tree instead of `NSView.cacheDisplay`. |
 
-## Tips
+## Tips for good snapshots
 
-- **Give every preview a unique display name.** The name becomes the test
-  name, the exported file name, and the sidecar `display_name`.
+- **Give every preview a unique display name.** It becomes the test name, the
+  exported file name, and the sidecar `display_name`. (Snap disambiguates
+  duplicates, but unique names read far better.)
 - **Keep previews deterministic.** Avoid live network calls, timers,
   animations that never settle, and clock-derived dates, so the same preview
-  produces the same pixels everywhere.
-- **Detect the snapshot environment** in your app code with a single check:
+  produces the same pixels in Xcode, locally, and in CI.
+- **Detect the snapshot environment** in app code with one check:
 
   ```swift
   extension ProcessInfo {
@@ -161,31 +248,45 @@ import SnapPreferences
 
 ## How it works
 
-Snap scans the `__swift5_proto` sections of the images loaded in the test
-process for protocol conformances to SwiftUI's `PreviewProvider` and
-DeveloperToolsSupport's `PreviewRegistry` (the protocol the `#Preview` macro
-expands to). For each conformance it reconstructs the declaring type, walks
-the runtime metadata to reach the preview's view, renders it in an offscreen
-`NSHostingController`, and captures the pixels.
+No source rewriting, no build plugins — Snap works from the compiled binary:
 
-`PreviewProvider` declares several children in `static var previews`; Snap
-selects each child individually through SwiftUI's variadic view tree.
-`#Preview` bodies live behind SPI types that are not visible to source
-compilation, so Snap extracts the view through runtime reflection instead.
+1. **Discovery.** At test-enumeration time, Snap scans the
+   `__swift5_proto` sections of every non-system image loaded in the test
+   process for protocol conformances to SwiftUI's `PreviewProvider` and
+   DeveloperToolsSupport's `PreviewRegistry` — the protocol the `#Preview`
+   macro expands to. For each conformance it reconstructs the declaring type
+   from Swift runtime metadata.
+2. **Extraction.** `PreviewProvider` declares several children in
+   `static var previews`; Snap selects each child individually through
+   SwiftUI's variadic view tree. `#Preview` bodies live behind
+   DeveloperToolsSupport types that are not visible to source compilation, so
+   Snap reaches the view through runtime reflection instead.
+3. **Test generation.** Snap registers one XCTest method per preview through
+   the Objective-C runtime, backed by a tiny ObjC shim that constructs the
+   `NSInvocation`s XCTest requires (they cannot be built from Swift).
+4. **Rendering.** Each preview is hosted in an offscreen, borderless
+   `NSHostingController`, sized with `sizeThatFits`, allowed one run-loop turn
+   to settle, and captured with `NSView.cacheDisplay`. A
+   `.preferredColorScheme(.dark)` inside a preview is detected and re-applied
+   as an environment override, matching what the Xcode canvas shows.
 
-Rendering happens inside the normal XCTest process — no host application
-required — which is what makes the package work for plain unit-test bundles.
+Rendering runs inside the plain XCTest process — no host application required —
+which is why this works for ordinary unit-test bundles.
 
 ## Scope and limitations
 
-- macOS only, SwiftUI previews only (`#Preview` and `PreviewProvider`).
+- macOS only; SwiftUI previews only (`#Preview` and `PreviewProvider`).
   Previews that wrap `NSView` content are not rendered.
-- The window-capture rendering mode from SnapshotPreviews is not ported:
-  the API it used (`CGWindowListCreateImage`) was obsoleted in macOS 15, and
-  its replacement (ScreenCaptureKit) requires asynchronous capture and screen
-  recording permissions.
+- Window-capture rendering is not ported: `CGWindowListCreateImage` was
+  obsoleted in macOS 15, and its replacement (ScreenCaptureKit) requires
+  asynchronous capture and screen-recording permissions.
 - Accessibility overlays, the in-app Preview Gallery, and the inserted-dylib
-  accessibility test flow from SnapshotPreviews are not ported.
+  accessibility test flow from SnapshotPreviews (see below) are not ported.
+
+Snap is a macOS-focused reimplementation of
+[getsentry/SnapshotPreviews][upstream] by EmergeTools, rebuilt as a pure
+source package — no prebuilt frameworks — for the needs of the
+[UzirEdit][uziredit] editor. See `LICENSE` for attribution.
 
 ## Development
 
@@ -218,5 +319,23 @@ your PATH resolves `swift` to a standalone toolchain (check with
 `which -a swift`). Run `xcrun swift test`, which selects the active Xcode
 toolchain via `xcode-select`, or switch that shell to Xcode's toolchain.
 
-[sentry]: https://docs.sentry.io/product/snapshots/
+## Contributing
+
+Issues and pull requests are welcome. For code changes:
+
+- Match the existing style; builds must stay warning-free.
+- Add a focused regression test under `Tests/SnapTestsTests` for every
+  behavior change, and run the full suite before submitting.
+- Include sample exported filenames, metadata, or screenshots when snapshot
+  output changes.
+- Keep the macOS CI job green.
+
+## License
+
+[MIT](LICENSE) — with retained attribution to
+[getsentry/SnapshotPreviews][upstream], from which this project is derived.
+
+[sentry snapshots]: https://docs.sentry.io/product/snapshots/
+[sentry-cli]: https://docs.sentry.io/cli/installation/
 [upstream]: https://github.com/getsentry/SnapshotPreviews
+[uziredit]: https://github.com/cafecito-games/UzirEdit
