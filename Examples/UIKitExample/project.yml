@@ -1,4 +1,4 @@
-name: UIKitSpike
+name: UIKitExample
 
 options:
   bundleIdPrefix: games.cafecito.snap
@@ -15,59 +15,59 @@ settings:
     CODE_SIGNING_ALLOWED: NO
 
 targets:
-  UIKitSpikeFixtures:
+  UIKitExampleFixtures:
     type: framework
     platform: iOS
     sources:
-      - Sources/UIKitSpikeFixtures
+      - Sources/UIKitExampleFixtures
     dependencies:
       - package: Snap
         product: SnapPreferences
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitSpikeFixtures
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitExampleFixtures
         GENERATE_INFOPLIST_FILE: YES
 
-  UIKitSpikeApp:
+  UIKitExampleApp:
     type: application
     platform: iOS
     sources:
-      - Sources/UIKitSpikeApp
+      - Sources/UIKitExampleApp
     dependencies:
-      - target: UIKitSpikeFixtures
+      - target: UIKitExampleFixtures
       - package: Snap
         product: SnapCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitSpikeApp
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitExampleApp
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"
 
-  UIKitSpikeAppTests:
+  UIKitExampleAppTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - Tests/UIKitSpikeAppTests
+      - Tests/UIKitExampleAppTests
     dependencies:
-      - target: UIKitSpikeApp
-      - target: UIKitSpikeFixtures
+      - target: UIKitExampleApp
+      - target: UIKitExampleFixtures
       - package: Snap
         product: SnapCore
       - package: Snap
         product: SnapTests
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitSpikeAppTests
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitExampleAppTests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:
-  UIKitSpike:
+  UIKitExample:
     build:
       targets:
-        UIKitSpikeApp: all
-        UIKitSpikeAppTests: [test]
+        UIKitExampleApp: all
+        UIKitExampleAppTests: [test]
     test:
       targets:
-        - UIKitSpikeAppTests
+        - UIKitExampleAppTests

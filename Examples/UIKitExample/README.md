@@ -1,14 +1,15 @@
-# UIKit Feasibility Spike
+# UIKit Example
 
-This project is an executable proof for the UIKit feasibility gate in the
-repository roadmap. It is not a supported Snap example yet.
+This app-hosted example demonstrates Snap's experimental UIKit discovery,
+rendering, and XCTest support. It also preserves the executable coverage used
+to pass the UIKit feasibility gate in the repository roadmap.
 
-The current experiment requires iOS 26 because Xcode 26-generated `#Preview`
+The example requires iOS 26 because Xcode 26-generated `#Preview`
 registries were not discoverable on an iOS 18.1 runtime. Legacy
 `PreviewProvider` discovery did work there; the compatibility finding is
 recorded in `ROADMAP.md`.
 
-The spike checks that an iOS Simulator test host can:
+The example verifies that an iOS Simulator test host can:
 
 1. discover linked `#Preview` declarations through Snap's runtime scanner;
 2. render SwiftUI and `UIViewRepresentable` content through UIKit;
@@ -18,10 +19,10 @@ The spike checks that an iOS Simulator test host can:
 Generate the local Xcode project and run the iPad Simulator tests:
 
 ```sh
-xcodegen --spec Examples/UIKitSpike/project.yml
+xcodegen --spec Examples/UIKitExample/project.yml
 xcodebuild test \
-  -project Examples/UIKitSpike/UIKitSpike.xcodeproj \
-  -scheme UIKitSpike \
+  -project Examples/UIKitExample/UIKitExample.xcodeproj \
+  -scheme UIKitExample \
   -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.4'
 ```
 

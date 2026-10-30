@@ -87,7 +87,7 @@ against the freshly built frameworks.
 
 The supported library and gallery require macOS 15+, Xcode 26, and Swift 6.
 Experimental UIKit discovery, rendering, and XCTest support targets iOS 26+;
-[`Examples/UIKitSpike`](Examples/UIKitSpike) is the app-hosted validation
+[`Examples/UIKitExample`](Examples/UIKitExample) is the app-hosted validation
 project. The UIKit gallery shell is not implemented yet.
 
 ## Generating snapshots

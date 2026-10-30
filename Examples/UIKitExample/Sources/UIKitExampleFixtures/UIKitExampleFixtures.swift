@@ -2,10 +2,10 @@ import SnapPreferences
 import SwiftUI
 import UIKit
 
-/// A public marker that keeps this fixture module linked into the spike host.
-public enum UIKitSpikeMarker {}
+/// A public marker that keeps this fixture module linked into the example host.
+public enum UIKitExampleMarker {}
 
-public struct UIKitSpikeCard: View {
+public struct UIKitExampleCard: View {
     public init() {}
 
     public var body: some View {
@@ -14,7 +14,7 @@ public struct UIKitSpikeCard: View {
                 .font(.headline)
             Text("Discovered from a compiled #Preview")
                 .foregroundStyle(.secondary)
-            UIKitSpikeLabel(text: "UIViewRepresentable")
+            UIKitExampleLabel(text: "UIViewRepresentable")
                 .frame(height: 32)
         }
         .padding(20)
@@ -23,7 +23,7 @@ public struct UIKitSpikeCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
-public struct UIKitSpikeLabel: UIViewRepresentable {
+public struct UIKitExampleLabel: UIViewRepresentable {
     let text: String
 
     public init(text: String) {
@@ -45,20 +45,20 @@ public struct UIKitSpikeLabel: UIViewRepresentable {
     }
 }
 
-public struct UIKitSpikeProviderPreviews: PreviewProvider {
+public struct UIKitExampleProviderPreviews: PreviewProvider {
     public static var previews: some View {
-        UIKitSpikeCard()
+        UIKitExampleCard()
             .previewDisplayName("UIKit Provider")
     }
 }
 
-#Preview("UIKit Spike Card", traits: .sizeThatFitsLayout) {
-    UIKitSpikeCard()
+#Preview("UIKit Example Card", traits: .sizeThatFitsLayout) {
+    UIKitExampleCard()
         .snapTags(["platform": "uikit", "kind": "swiftui"])
 }
 
 #Preview("UIKit Representable", traits: .fixedLayout(width: 280, height: 80)) {
-    UIKitSpikeLabel(text: "Native UIKit content")
+    UIKitExampleLabel(text: "Native UIKit content")
         .padding()
 }
 

@@ -1,9 +1,9 @@
 import SnapCore
-import UIKitSpikeFixtures
+import UIKitExampleFixtures
 import XCTest
 
 @MainActor
-final class UIKitSpikeAppTests: XCTestCase {
+final class UIKitExampleAppTests: XCTestCase {
     func testDiscoversCompiledMacroPreviews() throws {
         let previews = discoveredPreviews()
         let allContainers = PreviewDiscovery.discoverContainers(
@@ -15,7 +15,7 @@ final class UIKitSpikeAppTests: XCTestCase {
             [
                 "UIKit Layer",
                 "UIKit Provider",
-                "UIKit Spike Card",
+                "UIKit Example Card",
                 "UIKit Representable",
             ],
             "All discovered containers: \(allContainers.map(\.typeName))"
@@ -24,7 +24,7 @@ final class UIKitSpikeAppTests: XCTestCase {
 
     func testRendersSwiftUIAndUIKitContentToPNG() async throws {
         let preview = try XCTUnwrap(
-            discoveredPreviews().first { $0.displayName == "UIKit Spike Card" }
+            discoveredPreviews().first { $0.displayName == "UIKit Example Card" }
         )
 
         let outcome = UIKitPreviewRenderer().render(
@@ -78,7 +78,7 @@ final class UIKitSpikeAppTests: XCTestCase {
 
     private func discoveredPreviews() -> [RenderablePreview] {
         let moduleName = String(
-            String(reflecting: UIKitSpikeMarker.self)
+            String(reflecting: UIKitExampleMarker.self)
                 .split(separator: ".", maxSplits: 1)
                 .first ?? ""
         )

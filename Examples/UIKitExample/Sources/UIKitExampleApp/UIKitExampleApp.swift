@@ -1,22 +1,22 @@
 import SnapCore
 import SwiftUI
-import UIKitSpikeFixtures
+import UIKitExampleFixtures
 
 @main
-struct UIKitSpikeApp: App {
+struct UIKitExampleApp: App {
     var body: some Scene {
         WindowGroup {
-            UIKitSpikeStatusView()
+            UIKitExampleStatusView()
         }
     }
 }
-private struct UIKitSpikeStatusView: View {
+private struct UIKitExampleStatusView: View {
     @State private var status = "Discovering previews…"
 
     var body: some View {
         NavigationStack {
             ContentUnavailableView(
-                "Snap UIKit Spike",
+                "Snap UIKit Example",
                 systemImage: "rectangle.stack",
                 description: Text(status)
             )
@@ -24,7 +24,7 @@ private struct UIKitSpikeStatusView: View {
         }
         .task {
             let moduleName = String(
-                String(reflecting: UIKitSpikeMarker.self)
+                String(reflecting: UIKitExampleMarker.self)
                     .split(separator: ".", maxSplits: 1)
                     .first ?? ""
             )

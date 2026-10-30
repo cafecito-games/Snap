@@ -77,7 +77,7 @@ artifact extraction must be proven before support is promised.
 - A demo component module shared by gallery and test examples.
 - A platform-neutral render request, outcome, error, and bitmap contract with
   AppKit and experimental UIKit backends.
-- Thirty-eight passing macOS tests plus eight passing UIKit spike tests.
+- Thirty-eight passing macOS tests plus eight passing UIKit example tests.
 
 ## Milestones
 
