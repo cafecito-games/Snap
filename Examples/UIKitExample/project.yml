@@ -1,0 +1,73 @@
+name: UIKitExample
+
+options:
+  bundleIdPrefix: games.cafecito.snap
+  deploymentTarget:
+    iOS: "26.0"
+
+packages:
+  Snap:
+    path: ../..
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGNING_ALLOWED: NO
+
+targets:
+  UIKitExampleFixtures:
+    type: framework
+    platform: iOS
+    sources:
+      - Sources/UIKitExampleFixtures
+    dependencies:
+      - package: Snap
+        product: SnapPreferences
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitExampleFixtures
+        GENERATE_INFOPLIST_FILE: YES
+
+  UIKitExampleApp:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/UIKitExampleApp
+    dependencies:
+      - target: UIKitExampleFixtures
+      - package: Snap
+        product: SnapCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitExampleApp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  UIKitExampleAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests/UIKitExampleAppTests
+    dependencies:
+      - target: UIKitExampleApp
+      - target: UIKitExampleFixtures
+      - package: Snap
+        product: SnapCore
+      - package: Snap
+        product: SnapTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitExampleAppTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  UIKitExample:
+    build:
+      targets:
+        UIKitExampleApp: all
+        UIKitExampleAppTests: [test]
+    test:
+      targets:
+        - UIKitExampleAppTests

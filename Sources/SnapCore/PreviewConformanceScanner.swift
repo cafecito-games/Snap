@@ -22,19 +22,24 @@ struct PreviewConformance {
 enum PreviewConformanceScanner {
     static let previewProtocolNames: Set<String> = ["PreviewProvider", "PreviewRegistry"]
 
-    /// Scans all eligible loaded images once per process.
+    /// Scans all eligible loaded images and reuses the result until dyld adds
+    /// or removes an image from the process.
     static func scan() -> [PreviewConformance] {
-        if let cached = cachedConformances {
+        let imageCount = _dyld_image_count()
+        if let cached = cachedConformances, cachedImageCount == imageCount {
             return cached
         }
         let conformances = scanEachLoadedImage()
         cachedConformances = conformances
+        cachedImageCount = _dyld_image_count()
         return conformances
     }
 
-    // Written once from the main thread during test enumeration. Individual
-    // test runs never race the first scan because enumeration precedes them.
+    // Read and updated from the main thread during discovery. The image count
+    // prevents a gallery refresh from returning a catalog cached before a
+    // newly loaded preview module became available.
     nonisolated(unsafe) private static var cachedConformances: [PreviewConformance]?
+    nonisolated(unsafe) private static var cachedImageCount: UInt32?
 
     private static func scanEachLoadedImage() -> [PreviewConformance] {
         var conformances: [PreviewConformance] = []

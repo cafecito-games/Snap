@@ -3,7 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "Snap",
-    platforms: [.macOS(.v15)],
+    platforms: [
+        .macOS(.v15),
+        .iOS("26.0"),
+    ],
     products: [
         // Link this product to your XCTest target.
         .library(name: "SnapTests", targets: ["SnapTests"]),

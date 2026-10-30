@@ -3,6 +3,7 @@
 /.swiftpm
 /Packages
 xcuserdata/
+/Examples/UIKitExample/UIKitExample.xcodeproj/
 DerivedData/
 .netrc
 dist/

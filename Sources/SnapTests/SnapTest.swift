@@ -3,7 +3,8 @@ import SwiftUI
 import SnapCore
 import SnapModels
 
-/// A test class that renders every discovered Xcode preview on macOS.
+/// A test class that renders every discovered Xcode preview in an AppKit or
+/// app-hosted UIKit test bundle.
 ///
 /// Subclass `SnapTest` in an XCTest target and run it — there are no test
 /// methods to write. One XCTest method is generated per discovered preview:
@@ -18,8 +19,13 @@ import SnapModels
 ///     }
 open class SnapTest: SnapDynamicTestCase {
 
+#if canImport(AppKit)
     @MainActor
     private static var renderer: AppKitPreviewRenderer?
+#elseif canImport(UIKit)
+    @MainActor
+    private static var renderer: UIKitPreviewRenderer?
+#endif
     @MainActor
     private static var fileNameResolver = SnapshotFileNameResolver(containers: [])
     @MainActor
@@ -97,6 +103,7 @@ open class SnapTest: SnapDynamicTestCase {
         let preview = pendingCase.preview
         let container = pendingCase.container
 
+#if canImport(AppKit)
         let renderer: AppKitPreviewRenderer
         if let existing = Self.renderer {
             renderer = existing
@@ -104,6 +111,15 @@ open class SnapTest: SnapDynamicTestCase {
             renderer = AppKitPreviewRenderer()
             Self.renderer = renderer
         }
+#elseif canImport(UIKit)
+        let renderer: UIKitPreviewRenderer
+        if let existing = Self.renderer {
+            renderer = existing
+        } else {
+            renderer = UIKitPreviewRenderer()
+            Self.renderer = renderer
+        }
+#endif
 
         let outcome = renderer.render(preview, captureImage: Self.capturesImages())
 
@@ -124,12 +140,12 @@ open class SnapTest: SnapDynamicTestCase {
         let imageFileName = SnapshotFileName.imageFileName(from: baseFileName)
 
         if let coordinator = Self.exportCoordinator {
-            guard let image = outcome.image else {
+            guard let bitmap = outcome.bitmap else {
                 XCTFail("Snap: no image was captured for \(imageFileName)")
                 return
             }
             coordinator.enqueue(
-                image: image,
+                bitmap: bitmap,
                 metadata: SnapshotExportCoordinator.ExportMetadata(
                     imageFileName: imageFileName,
                     testName: name,
@@ -151,8 +167,8 @@ open class SnapTest: SnapDynamicTestCase {
                     additionalContext: outcome.preferences.additionalContext
                 )
             )
-        } else if let image = outcome.image {
-            guard let pngData = image.pngData() else {
+        } else if let bitmap = outcome.bitmap {
+            guard let pngData = bitmap.pngData() else {
                 XCTFail("Snap: could not encode PNG for \(imageFileName)")
                 return
             }

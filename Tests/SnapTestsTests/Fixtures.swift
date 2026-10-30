@@ -38,6 +38,13 @@ import SnapPreferences
     .preferredColorScheme(.dark)
 }
 
+#Preview("Fixture Layer Rendering") {
+    Text("Layer Fixture")
+        .padding()
+        .background(.ultraThinMaterial)
+        .snapRenderingMode(.layer)
+}
+
 #Preview {
     Text("Unnamed Fixture")
         .padding()

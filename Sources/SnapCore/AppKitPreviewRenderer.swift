@@ -1,5 +1,5 @@
+#if canImport(AppKit)
 import AppKit
-import CoreFoundation
 import SwiftUI
 import SnapModels
 
@@ -8,29 +8,14 @@ import SnapModels
 /// The renderer keeps one borderless window alive for the lifetime of a test
 /// run and swaps in a fresh hosting controller per preview.
 @MainActor
-public final class AppKitPreviewRenderer {
+public final class AppKitPreviewRenderer: PreviewRenderer {
     /// The default box proposed to previews that do not declare a fixed size.
     /// Previews with explicit `.frame` modifiers constrain themselves and are
     /// unaffected by this proposal.
     static let defaultProposedSize = NSSize(width: 800, height: 400)
 
-    /// The result of one render pass.
-    @frozen
-    public struct Outcome {
-        /// The captured image, or `nil` when capture was skipped or failed.
-        public let image: NSImage?
-
-        /// The color scheme the preview declared through
-        /// `.preferredColorScheme(_:)`, if any.
-        public let colorScheme: ColorScheme?
-
-        /// Per-preview preferences declared with the `SnapPreferences`
-        /// modifiers, when that library is linked into the process.
-        public let preferences: SnapshotPreferenceSnapshot
-
-        /// The failure that prevented image capture, if any.
-        public let captureError: Error?
-    }
+    /// Compatibility name for the shared render outcome.
+    public typealias Outcome = PreviewRenderOutcome
 
     private let window: SnapshotWindow
     private var widthAnchor: NSLayoutConstraint?
@@ -51,9 +36,21 @@ public final class AppKitPreviewRenderer {
         _ preview: RenderablePreview,
         captureImage: Bool = true
     ) -> Outcome {
-        let prepared = prepare(preview)
-        settleLayout()
-        return finish(prepared, captureImage: captureImage)
+        render(
+            PreviewRenderRequest(
+                preview: preview,
+                capturesBitmap: captureImage
+            )
+        )
+    }
+
+    public func render(_ request: PreviewRenderRequest) -> PreviewRenderOutcome {
+        let prepared = prepare(
+            request.preview,
+            configuration: request.configuration
+        )
+        request.configuration.settling.settleSynchronously()
+        return finish(prepared, request: request)
     }
 
     /// Renders from a running application without blocking SwiftUI's commit
@@ -63,17 +60,29 @@ public final class AppKitPreviewRenderer {
         _ preview: RenderablePreview,
         captureImage: Bool = true
     ) async -> Outcome {
-        let prepared = prepare(preview)
-        await Task.yield()
-        try? await Task.sleep(for: .milliseconds(50))
-        return finish(prepared, captureImage: captureImage)
+        let request = PreviewRenderRequest(
+            preview: preview,
+            capturesBitmap: captureImage
+        )
+        let prepared = prepare(
+            request.preview,
+            configuration: request.configuration
+        )
+        await request.configuration.settling.settleAsynchronously()
+        return finish(prepared, request: request)
     }
 
-    private func prepare(_ preview: RenderablePreview) -> PreparedRender {
+    private func prepare(
+        _ preview: RenderablePreview,
+        configuration: PreviewRenderConfiguration
+    ) -> PreparedRender {
         let schemeBox = PreferredSchemeBox()
 
         var rootView: AnyView = AnyView(
-            PreviewHostingView(preview: preview) { scheme in
+            PreviewHostingView(
+                preview: preview,
+                colorSchemeOverride: configuration.colorScheme
+            ) { scheme in
                 schemeBox.value = scheme
             }
         )
@@ -92,12 +101,13 @@ public final class AppKitPreviewRenderer {
         window.setContentSize(Self.defaultProposedSize)
         window.contentViewController = hostingController
 
-        let proposedSize = proposedSize(for: preview.layout)
+        let proposedSize = configuration.viewport ?? proposedSize(for: preview.layout)
         let fittingSize = hostingController.sizeThatFits(in: proposedSize)
+        let renderSize = configuration.viewport ?? fittingSize
         applySizeConstraints(
             to: hostingController.view,
-            width: fittingSize.width,
-            height: fittingSize.height
+            width: renderSize.width,
+            height: renderSize.height
         )
         hostingController.view.layoutSubtreeIfNeeded()
         hostingController.view.needsDisplay = true
@@ -111,13 +121,13 @@ public final class AppKitPreviewRenderer {
 
     private func finish(
         _ prepared: PreparedRender,
-        captureImage: Bool
+        request: PreviewRenderRequest
     ) -> Outcome {
         let preferences = SnapshotPreferenceReader.readSnapshot()
 
-        guard captureImage else {
+        guard request.capturesBitmap else {
             return Outcome(
-                image: nil,
+                bitmap: nil,
                 colorScheme: prepared.schemeBox.value,
                 preferences: preferences,
                 captureError: nil
@@ -126,22 +136,30 @@ public final class AppKitPreviewRenderer {
 
         let mode = preferences.renderingMode ?? .view
         do {
-            let image = try capture(
+            let bitmap = try capture(
                 mode: mode,
-                hostingController: prepared.hostingController
+                hostingController: prepared.hostingController,
+                scale: request.configuration.scale
             )
             return Outcome(
-                image: image,
+                bitmap: bitmap,
                 colorScheme: prepared.schemeBox.value,
                 preferences: preferences,
                 captureError: nil
             )
-        } catch {
+        } catch let error as PreviewRenderError {
             return Outcome(
-                image: nil,
+                bitmap: nil,
                 colorScheme: prepared.schemeBox.value,
                 preferences: preferences,
                 captureError: error
+            )
+        } catch {
+            return Outcome(
+                bitmap: nil,
+                colorScheme: prepared.schemeBox.value,
+                preferences: preferences,
+                captureError: .bitmapCreationFailed
             )
         }
     }
@@ -171,41 +189,16 @@ public final class AppKitPreviewRenderer {
         heightAnchor?.isActive = true
     }
 
-    /// Gives asynchronous layout and preference propagation one turn of the
-    /// run loop to settle before pixels are captured.
-    private func settleLayout() {
-        CFRunLoopRunInMode(CFRunLoopMode.defaultMode, 0.05, false)
-    }
-
     private func capture(
         mode: SnapshotRenderingMode,
-        hostingController: NSHostingController<AnyView>
-    ) throws -> NSImage {
+        hostingController: NSHostingController<AnyView>,
+        scale: CGFloat?
+    ) throws -> SnapshotBitmap {
         switch mode {
         case .view:
-            guard let image = hostingController.view.snapshotImage() else {
-                throw CaptureError.viewCaptureFailed
-            }
-            return image
+            return try hostingController.view.snapshotBitmap(scale: scale)
         case .layer:
-            guard let image = hostingController.view.layerSnapshotImage() else {
-                throw CaptureError.layerCaptureFailed
-            }
-            return image
-        }
-    }
-
-    enum CaptureError: Error, CustomStringConvertible {
-        case viewCaptureFailed
-        case layerCaptureFailed
-
-        var description: String {
-            switch self {
-            case .viewCaptureFailed:
-                return "Capturing the hosting view through cacheDisplay failed."
-            case .layerCaptureFailed:
-                return "Capturing the hosting view's layer tree failed."
-            }
+            return try hostingController.view.layerSnapshotBitmap(scale: scale)
         }
     }
 }
@@ -233,3 +226,4 @@ final class SnapshotWindow: NSWindow {
 private final class PreferredSchemeBox {
     var value: ColorScheme?
 }
+#endif
