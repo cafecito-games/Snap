@@ -85,7 +85,10 @@ Imports are identical in both distributions; the binary artifacts are
 verified in CI by running the [DemoApp](Examples/DemoApp) preview tests
 against the freshly built frameworks.
 
-Requires macOS 15+, Xcode 26, and Swift 6.
+The supported library and gallery require macOS 15+, Xcode 26, and Swift 6.
+Experimental UIKit discovery, rendering, and XCTest support targets iOS 26+;
+[`Examples/UIKitSpike`](Examples/UIKitSpike) is the app-hosted validation
+project. The UIKit gallery shell is not implemented yet.
 
 ## Generating snapshots
 
@@ -340,13 +343,16 @@ which is why this works for ordinary unit-test bundles.
 
 ## Scope and limitations
 
-- macOS only; SwiftUI previews only (`#Preview` and `PreviewProvider`).
-  Previews that wrap `NSView` content are not rendered.
+- macOS is the primary supported platform. Experimental iOS/iPadOS discovery,
+  rendering, and simulator tests target the current and previous major OS
+  versions; the native UIKit gallery is still roadmap work.
+- SwiftUI previews only (`#Preview` and `PreviewProvider`). Previews that wrap
+  `NSView` content are not rendered by the macOS backend.
 - Window-capture rendering is not ported: `CGWindowListCreateImage` was
   obsoleted in macOS 15, and its replacement (ScreenCaptureKit) requires
   asynchronous capture and screen-recording permissions.
-- Accessibility overlays, the in-app Preview Gallery, and the inserted-dylib
-  accessibility test flow from SnapshotPreviews (see below) are not ported.
+- Accessibility overlays and the inserted-dylib accessibility test flow from
+  SnapshotPreviews (see below) are not ported.
 
 Snap is a macOS-focused reimplementation of
 [getsentry/SnapshotPreviews][upstream] by EmergeTools, rebuilt as a pure
@@ -354,6 +360,9 @@ source package — no prebuilt frameworks — for the needs of the
 [UzirEdit][uziredit] editor. See `LICENSE` for attribution.
 
 ## Development
+
+See [`ROADMAP.md`](ROADMAP.md) for the product milestones, platform tiers,
+release gates, and current issue order.
 
 ```shell
 xcrun swift test          # unit tests + end-to-end fixture rendering

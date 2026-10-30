@@ -144,7 +144,7 @@ final class SnapshotExportCoordinator: NSObject, XCTestObservation {
         }
     }
 
-    func enqueue(image: NSImage, metadata: ExportMetadata) {
+    func enqueue(bitmap: SnapshotBitmap, metadata: ExportMetadata) {
         let pngURL = exportDirectoryURL.appendingPathComponent(metadata.imageFileName)
         let sidecarURL = exportDirectoryURL.appendingPathComponent(
             String(metadata.imageFileName.dropLast(".png".count)) + ".json"
@@ -152,7 +152,7 @@ final class SnapshotExportCoordinator: NSObject, XCTestObservation {
         let sidecar = Sidecar(metadata)
 
         writeQueue.addOperation {
-            guard let pngData = image.pngData() else {
+            guard let pngData = bitmap.pngData() else {
                 NSLog("[Snap] Failed to encode PNG for %@", metadata.imageFileName)
                 return
             }

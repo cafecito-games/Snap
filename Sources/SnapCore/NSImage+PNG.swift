@@ -1,3 +1,4 @@
+#if canImport(AppKit)
 import AppKit
 
 extension NSImage {
@@ -12,3 +13,10 @@ extension NSImage {
         return bitmapRepresentation.representation(using: .png, properties: [:])
     }
 }
+
+extension SnapshotBitmap {
+    package var nsImage: NSImage {
+        NSImage(cgImage: cgImage, size: size)
+    }
+}
+#endif

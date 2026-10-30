@@ -169,7 +169,8 @@ final class GalleryModel {
             pendingStoryIDs.remove(story.id)
 
             let outcome = await renderer.renderForGallery(story.preview)
-            if let image = outcome.image {
+            if let bitmap = outcome.bitmap {
+                let image = bitmap.nsImage
                 thumbnailCache.setObject(
                     image,
                     forKey: story.id as NSString,

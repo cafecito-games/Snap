@@ -1,0 +1,73 @@
+name: UIKitSpike
+
+options:
+  bundleIdPrefix: games.cafecito.snap
+  deploymentTarget:
+    iOS: "26.0"
+
+packages:
+  Snap:
+    path: ../..
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGNING_ALLOWED: NO
+
+targets:
+  UIKitSpikeFixtures:
+    type: framework
+    platform: iOS
+    sources:
+      - Sources/UIKitSpikeFixtures
+    dependencies:
+      - package: Snap
+        product: SnapPreferences
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitSpikeFixtures
+        GENERATE_INFOPLIST_FILE: YES
+
+  UIKitSpikeApp:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/UIKitSpikeApp
+    dependencies:
+      - target: UIKitSpikeFixtures
+      - package: Snap
+        product: SnapCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitSpikeApp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  UIKitSpikeAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests/UIKitSpikeAppTests
+    dependencies:
+      - target: UIKitSpikeApp
+      - target: UIKitSpikeFixtures
+      - package: Snap
+        product: SnapCore
+      - package: Snap
+        product: SnapTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: games.cafecito.snap.UIKitSpikeAppTests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  UIKitSpike:
+    build:
+      targets:
+        UIKitSpikeApp: all
+        UIKitSpikeAppTests: [test]
+    test:
+      targets:
+        - UIKitSpikeAppTests
