@@ -25,6 +25,22 @@ public struct Discover: Sendable {
         self.excludedPreviews = excludedPreviews.nilIfEmpty
     }
 
+    /// Discovers previews from the module that declares `marker`.
+    ///
+    /// Use an existing public type or a dedicated empty marker type. Because
+    /// the compiler resolves the type reference, this form follows module and
+    /// type renames and also keeps the declaring module linked into the host.
+    public init<Marker>(
+        from marker: Marker.Type,
+        including includedPreviews: [String] = [],
+        excluding excludedPreviews: [String] = []
+    ) {
+        includedModules = [Self.moduleName(of: marker)]
+        excludedModules = nil
+        self.includedPreviews = includedPreviews.nilIfEmpty
+        self.excludedPreviews = excludedPreviews.nilIfEmpty
+    }
+
     /// Discovers previews from every module linked into the gallery process.
     public init(
         including includedPreviews: [String] = [],
@@ -55,6 +71,11 @@ public struct Discover: Sendable {
             includedModules: includedModules,
             excludedModules: excludedModules
         )
+    }
+
+    private static func moduleName(of marker: Any.Type) -> String {
+        let qualifiedName = String(reflecting: marker)
+        return String(qualifiedName.split(separator: ".", maxSplits: 1).first ?? "")
     }
 }
 

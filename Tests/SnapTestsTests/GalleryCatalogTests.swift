@@ -19,6 +19,15 @@ final class GalleryCatalogTests: XCTestCase {
         XCTAssertEqual(discovery.selection.excludedPreviewNames, ["Disabled"])
     }
 
+    func testDiscoverDerivesModuleFromMarkerType() {
+        let discovery = Discover(from: ModuleMarker.self)
+        let expectedModule = String(
+            String(reflecting: ModuleMarker.self).split(separator: ".").first ?? ""
+        )
+
+        XCTAssertEqual(discovery.selection.includedModules, [expectedModule])
+    }
+
     func testGalleryBuilderSupportsConditionalsAndLoops() {
         let includesAdmin = true
         let modules = ["Feature", "DesignSystem"]
@@ -276,6 +285,8 @@ final class GalleryCatalogTests: XCTestCase {
     ) -> [Discover] {
         content()
     }
+
+    private enum ModuleMarker {}
 
     private func makeContainer(
         typeName: String,
