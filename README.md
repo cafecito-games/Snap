@@ -235,10 +235,21 @@ import SwiftUI
 
 struct DeveloperToolsView: View {
     var body: some View {
-        SnapGallery(includedModules: ["EditorWorkspace"])
+        SnapGallery {
+            Discover("EditorWorkspace")
+            Discover(
+                "DesignSystem",
+                including: ["Button", "Field"]
+            )
+        }
     }
 }
 ```
+
+Each `Discover` rule names an exact Swift module. Its optional `including` and
+`excluding` values are regular expressions matched against preview names.
+Overlapping rules are combined without duplicating stories. Use `Discover()`
+to include previews from every linked module.
 
 The host app must link or reference every module whose previews it should show.
 Use a Debug-like build configuration: optimized builds may remove preview

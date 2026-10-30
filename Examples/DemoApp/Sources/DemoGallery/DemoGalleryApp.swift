@@ -11,7 +11,9 @@ struct DemoGalleryApp: App {
 
     var body: some Scene {
         WindowGroup {
-            SnapGallery(includedModules: ["DemoKit"])
+            SnapGallery {
+                Discover("DemoKit")
+            }
         }
         .defaultSize(width: 1280, height: 800)
     }
