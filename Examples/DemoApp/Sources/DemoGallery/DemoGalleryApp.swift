@@ -4,14 +4,11 @@ import SwiftUI
 
 @main
 struct DemoGalleryApp: App {
-    init() {
-        // Keep the preview-bearing module linked into the gallery process.
-        _ = PlayerCard.self
-    }
-
     var body: some Scene {
         WindowGroup {
-            SnapGallery(includedModules: ["DemoKit"])
+            SnapGallery {
+                Discover(from: PlayerCard.self)
+            }
         }
         .defaultSize(width: 1280, height: 800)
     }

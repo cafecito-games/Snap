@@ -7,6 +7,59 @@ import XCTest
 
 @MainActor
 final class GalleryCatalogTests: XCTestCase {
+    func testDiscoverSelectsOneExactModule() {
+        let discovery = Discover(
+            "Feature",
+            including: ["Button"],
+            excluding: ["Disabled"]
+        )
+
+        XCTAssertEqual(discovery.selection.includedModules, ["Feature"])
+        XCTAssertEqual(discovery.selection.includedPreviewNames, ["Button"])
+        XCTAssertEqual(discovery.selection.excludedPreviewNames, ["Disabled"])
+    }
+
+    func testDiscoverDerivesModuleFromMarkerType() {
+        let discovery = Discover(from: ModuleMarker.self)
+        let expectedModule = String(
+            String(reflecting: ModuleMarker.self).split(separator: ".").first ?? ""
+        )
+
+        XCTAssertEqual(discovery.selection.includedModules, [expectedModule])
+    }
+
+    func testGalleryBuilderSupportsConditionalsAndLoops() {
+        let includesAdmin = true
+        let modules = ["Feature", "DesignSystem"]
+
+        let discoveries = makeDiscoveries {
+            for module in modules {
+                Discover(module)
+            }
+            if includesAdmin {
+                Discover("Admin")
+            }
+        }
+
+        XCTAssertEqual(
+            discoveries.flatMap { $0.selection.includedModules ?? [] },
+            ["Feature", "DesignSystem", "Admin"]
+        )
+    }
+
+    func testOverlappingDiscoverRulesDoNotDuplicateContainers() {
+        let moduleName = String(
+            String(reflecting: Self.self).split(separator: ".").first ?? ""
+        )
+
+        let containers = SnapGallery.discoverContainers(
+            for: [Discover(moduleName), Discover(moduleName)]
+        )
+
+        XCTAssertFalse(containers.isEmpty)
+        XCTAssertEqual(Set(containers.map(\.typeName)).count, containers.count)
+    }
+
     func testGroupsMacroPreviewsFromTheSameFileIntoOneComponent() {
         let containers = [
             makeContainer(
@@ -226,6 +279,14 @@ final class GalleryCatalogTests: XCTestCase {
             }
         )
     }
+
+    private func makeDiscoveries(
+        @SnapGalleryBuilder _ content: () -> [Discover]
+    ) -> [Discover] {
+        content()
+    }
+
+    private enum ModuleMarker {}
 
     private func makeContainer(
         typeName: String,

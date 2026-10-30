@@ -13,6 +13,14 @@ import SwiftUI
 public struct SnapGallery: View {
     @State private var model: GalleryModel
 
+    /// Creates a gallery from declarative preview-discovery rules.
+    ///
+    /// Each ``Discover`` contributes previews from a linked Swift module.
+    /// Overlapping rules are combined without duplicating stories.
+    public init(@SnapGalleryBuilder content: () -> [Discover]) {
+        self.init(discoveries: content())
+    }
+
     /// Creates a gallery and optionally filters the previews it discovers.
     ///
     /// Preview name filters are regular expressions. Module filters are exact
@@ -23,6 +31,19 @@ public struct SnapGallery: View {
         includedModules: [String]? = nil,
         excludedModules: [String]? = nil
     ) {
+        self.init(
+            discoveries: [
+                Discover(
+                    includedPreviews: includedPreviews,
+                    excludedPreviews: excludedPreviews,
+                    includedModules: includedModules,
+                    excludedModules: excludedModules
+                ),
+            ]
+        )
+    }
+
+    private init(discoveries: [Discover]) {
         SnapPreferencesRuntime.ensureLoaded()
         SnapshotPreferenceReader.install(
             wrapWithPreferences: { view in
@@ -39,19 +60,21 @@ public struct SnapGallery: View {
                 )
             }
         )
-        let containers = PreviewDiscovery.discoverContainers(
-            selection: PreviewSelection(
-                includedPreviewNames: includedPreviews,
-                excludedPreviewNames: excludedPreviews,
-                includedModules: includedModules,
-                excludedModules: excludedModules
-            )
-        )
+        let containers = Self.discoverContainers(for: discoveries)
         _model = State(
             initialValue: GalleryModel(
                 catalog: GalleryCatalog(containers: containers)
             )
         )
+    }
+
+    static func discoverContainers(for discoveries: [Discover]) -> [PreviewContainer] {
+        var seenTypeNames: Set<String> = []
+
+        return discoveries.flatMap { discovery in
+            PreviewDiscovery.discoverContainers(selection: discovery.selection)
+        }
+        .filter { seenTypeNames.insert($0.typeName).inserted }
     }
 
     public var body: some View {

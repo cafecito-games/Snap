@@ -235,10 +235,24 @@ import SwiftUI
 
 struct DeveloperToolsView: View {
     var body: some View {
-        SnapGallery(includedModules: ["EditorWorkspace"])
+        SnapGallery {
+            Discover(from: EditorWorkspaceView.self)
+            Discover(
+                "DesignSystem",
+                including: ["Button", "Field"]
+            )
+        }
     }
 }
 ```
+
+Prefer `Discover(from:)` with an existing public type—or a dedicated empty
+marker type—from the module. This form is checked by the compiler, follows
+renames, and keeps the module linked into the gallery host. The string form is
+available for dynamic configurations. Optional `including` and `excluding`
+values are regular expressions matched against preview names. Overlapping
+rules are combined without duplicating stories; `Discover()` includes previews
+from every linked module.
 
 The host app must link or reference every module whose previews it should show.
 Use a Debug-like build configuration: optimized builds may remove preview
